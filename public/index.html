@@ -6,20 +6,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EcoTrail - Mapa de Trilhos</title>
 
-    <link rel="stylesheet" href="style.css">
-
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-    <h1 class="main-title">EcoTrail: Visualizador de Trilhos</h1>
+    <header class="main-header">
+        <h1 class="main-title">🚀 EcoTrail: Aveiro</h1>
+        <div class="controls">
+            <label for="trail-selector">Escolha um Trilho:</label>
+            <select id="trail-selector">
+                <option value="1">Trilho da Ria</option>
+                <option value="2">Passadiços de Aveiro</option>
+                <option value="3">Reserva de S. Jacinto</option>
+            </select>
+        </div>
+    </header>
+
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script>
-        // ... (o código do script que já tinhas mantém-se aqui ou noutro ficheiro JS)
-    </script>
+    <script src="script.js"></script>
 </body>
 
 </html>
