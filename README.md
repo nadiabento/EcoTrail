@@ -1,7 +1,9 @@
-🚀 Projeto EcoTrail: Gestor de Trilhos Ecológicos
+# 🚀 Projeto EcoTrail: Gestor de Trilhos Ecológicos
+
 O EcoTrail é uma aplicação Full-Stack GIS que permite a visualização interativa de trilhos em Aveiro, integrando dados geográficos complexos com conteúdos multimédia ricos.
 
-🏗️ Arquitetura do Sistema
+# 🏗️ Arquitetura do Sistema
+
 O projeto utiliza uma arquitetura híbrida de bases de dados para otimizar o desempenho:
 
 PostgreSQL + PostGIS (Neon.tech): Armazenamento de geometrias (LineStrings/Points) e metadados técnicos.
@@ -17,7 +19,7 @@ Jessica: Gestor de Dados Espaciais,"SQL, PostGIS, Geometrias e Queries Espaciais
 António: Gestor de Conteúdo NoSQL,"MongoDB, Curadoria de Conteúdo e Imagens."
 Nadia: Integrador & Frontend,"API Híbrida, Leaflet.js, UX/UI e Deploy."
 
-🛠️ Configuração do Ambiente
+# Configuração do Ambiente
 
 1. Requisitos Prévios
    Node.js instalado.
