@@ -16,7 +16,9 @@ Frontend: Leaflet.js para renderização cartográfica.
 
 Membro,Função,Foco Principal
 Jessica: Gestor de Dados Espaciais,"SQL, PostGIS, Geometrias e Queries Espaciais."
+
 António: Gestor de Conteúdo NoSQL,"MongoDB, Curadoria de Conteúdo e Imagens."
+
 Nadia: Integrador & Frontend,"API Híbrida, Leaflet.js, UX/UI e Deploy."
 
 # Configuração do Ambiente
