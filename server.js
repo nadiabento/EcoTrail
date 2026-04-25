@@ -10,31 +10,27 @@ const port = process.env.PORT || 3000;
 // --- 1. CONFIGURAÇÕES ---
 app.use(cors());
 app.use(express.json());
-app.use(express.static("public"));
+app.use(express.static("public")); // Serve o teu index.html automaticamente
 
 // --- 2. LIGAÇÕES ---
 const pgPool = new Pool({
   connectionString: process.env.PG_URL,
 });
 
-// Nota: MONGO_URL deve estar no .env, mesmo que seja um link falso por agora
 const mongoClient = new MongoClient(
   process.env.MONGO_URL || "mongodb://localhost:27017",
 );
 
 async function startDatabases() {
   try {
-    // Ligação ao Postgres (Neon)
     await pgPool.query("SELECT NOW()");
-    console.log("Ligado ao PostgreSQL Neon");
+    console.log("✅ Ligado ao PostgreSQL Neon");
 
-    // Ligação ao MongoDB (Opcional por enquanto)
-    // Se o MONGO_URL for inválido, ele vai saltar para o catch desta função
     await mongoClient.connect();
-    console.log(" Ligado ao MongoDB Atlas");
+    console.log("✅ Ligado ao MongoDB Atlas");
   } catch (err) {
     console.log(
-      " Nota: Uma das bases de dados falhou, mas o servidor continua ativo.",
+      "⚠️ Nota: Uma das bases de dados falhou, mas o servidor continua ativo.",
     );
     console.log("Mensagem:", err.message);
   }
@@ -47,7 +43,7 @@ app.get("/api/trilho-completo/:id", async (req, res) => {
   try {
     const id = req.params.id;
 
-    // A. BUSCA POSTGRES (Obrigatório)
+    // A. BUSCA POSTGRES (Dados Espaciais)
     const pgRes = await pgPool.query(
       "SELECT *, ST_AsGeoJSON(geom) as geometry FROM trilhos WHERE id = $1",
       [id],
@@ -59,10 +55,9 @@ app.get("/api/trilho-completo/:id", async (req, res) => {
         .json({ error: "Trilho não encontrado no Postgres" });
     }
 
-    // B. BUSCA MONGODB (Protegida)
+    // B. BUSCA MONGODB (Dados Descritivos)
     let infoExtra = null;
     try {
-      // Só tenta buscar se o cliente estiver ligado
       infoExtra = await mongoClient
         .db("ecotrail")
         .collection("detalhes")
@@ -71,7 +66,7 @@ app.get("/api/trilho-completo/:id", async (req, res) => {
       console.log("ℹ Info: A ignorar MongoDB nesta resposta.");
     }
 
-    // C. MONTAGEM DO GEOJSON
+    // C. MONTAGEM DO GEOJSON HÍBRIDO
     const geoJSON = {
       type: "Feature",
       geometry: JSON.parse(pgRes.rows[0].geometry),
@@ -80,7 +75,8 @@ app.get("/api/trilho-completo/:id", async (req, res) => {
         dificuldade: pgRes.rows[0].dificuldade,
         distancia: pgRes.rows[0].distancia_km,
         detalhes: infoExtra || {
-          descricao: "Detalhes do MongoDB ainda não carregados.",
+          descricao:
+            "Detalhes do MongoDB ainda não carregados para este trilho.",
           fotos: [],
         },
       },
@@ -88,12 +84,11 @@ app.get("/api/trilho-completo/:id", async (req, res) => {
 
     res.json(geoJSON);
   } catch (err) {
-    console.error(" Erro fatal na API:", err.message);
+    console.error("❌ Erro fatal na API:", err.message);
     res.status(500).json({ error: "Erro interno no servidor" });
   }
 });
 
-// --- 4. START ---
 app.listen(port, () => {
-  console.log(` Servidor EcoTrail a correr em http://localhost:${port}`);
+  console.log(`🚀 Servidor EcoTrail a correr em http://localhost:${port}`);
 });
