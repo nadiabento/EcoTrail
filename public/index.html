@@ -3,20 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EcoTrail - Mapa de Trilhos Interativo</title>
-
+    <title>EcoTrail - WebSIG Aveiro</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-
     <link rel="stylesheet" href="style.css" />
   </head>
-
   <body>
     <header class="main-header">
-      <h1 class="main-title">🚀 EcoTrail: SIG</h1>
+      <h1 class="main-title">🚀 EcoTrail</h1>
 
       <div class="controls">
         <div class="control-group">
-          <label for="difficulty-filter">Filtrar por Nível</label>
+          <label for="difficulty-filter">Nível de Dificuldade</label>
           <select id="difficulty-filter" class="custom-select">
             <option value="todos">Todos os Trilhos</option>
             <option value="Fácil">Fácil</option>
@@ -36,8 +33,25 @@
 
     <div id="map"></div>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <div id="trail-info-panel" class="info-panel" style="display: none">
+      <h2 id="info-name">Nome do Trilho</h2>
+      <div class="info-content">
+        <p>📏 <b>Distância:</b> <span id="info-dist">0</span> km</p>
+        <p>⛰️ <b>Dificuldade:</b> <span id="info-diff">---</span></p>
+        <hr />
+        <p id="info-desc">A carregar detalhes...</p>
+      </div>
+      <button
+        class="btn-close"
+        onclick="
+          document.getElementById('trail-info-panel').style.display = 'none'
+        "
+      >
+        Fechar
+      </button>
+    </div>
 
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

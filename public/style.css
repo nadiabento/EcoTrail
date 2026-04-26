@@ -1,163 +1,61 @@
-/* 1. RESET E ESTRUTURA BASE */
+/* Garante que o mapa e o cabeçalho ocupam o ecrã todo sem scroll */
 body,
 html {
   margin: 0;
-  padding: 0;
   height: 100%;
-  width: 100%;
-  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  overflow: hidden; /* Mantém a interface fixa, apenas o mapa mexe */
-  background-color: #f4f7f6;
+  overflow: hidden;
+  font-family: sans-serif;
 }
 
-/* 2. CABEÇALHO (HEADER) */
+/* Estilo do Cabeçalho - Usa Flexbox para separar Título de Controlos */
 .main-header {
-  background: #ffffff;
-  padding: 0 20px;
+  height: 80px;
   display: flex;
-  justify-content: space-between; /* Título à esquerda, Controlos à direita */
+  justify-content: space-between;
   align-items: center;
-  border-bottom: 3px solid #2ecc71; /* Verde EcoTrail */
-  height: 80px; /* Aumentado ligeiramente para acomodar labels e seletores */
-  box-sizing: border-box;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  position: relative;
-  z-index: 1000; /* Garante que fica sobre o mapa */
+  padding: 0 20px;
+  border-bottom: 3px solid #2ecc71;
+  background: white;
+  z-index: 1000;
 }
 
-.main-title {
-  font-size: 1.4rem;
-  color: #2c3e50;
-  margin: 0;
-  font-weight: 700;
-}
-
-/* 3. CONTENTOR DE CONTROLOS (OS DOIS SELETORES) */
+/* Container dos seletores (Lado a lado) */
 .controls {
   display: flex;
-  gap: 15px; /* Espaço entre o grupo da dificuldade e o grupo do trilho */
-  align-items: center;
+  gap: 20px;
 }
 
-/* Grupo individual: Label + Select */
+/* Alinha a label por cima da caixa */
 .control-group {
   display: flex;
-  flex-direction: column; /* Label em cima do Select */
-  gap: 4px;
+  flex-direction: column;
+  gap: 3px;
 }
 
-.control-group label {
-  font-size: 0.75rem;
-  font-weight: bold;
-  color: #7f8c8d;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* ESTILO HÍBRIDO PARA OS SELETORES (IGUAIS) */
-.custom-select,
-#trail-selector,
-#difficulty-filter {
-  padding: 8px 12px;
-  border-radius: 6px;
+/* Estilo padronizado para as caixas de seleção */
+.custom-select {
   border: 2px solid #2ecc71;
-  background-color: #ffffff;
-  color: #2c3e50;
-  font-size: 0.9rem;
-  cursor: pointer;
-  min-width: 180px; /* Garante que não ficam pequenos demais */
-  transition: all 0.2s ease-in-out;
-  outline: none;
+  border-radius: 5px;
+  padding: 5px;
+  min-width: 200px;
 }
 
-.custom-select:hover,
-#trail-selector:hover,
-#difficulty-filter:hover {
-  border-color: #27ae60;
-  background-color: #f9fffb;
-}
-
-.custom-select:focus {
-  box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.2);
-}
-
-/* 4. CONTENTOR DO MAPA */
+/* Mapa ocupa a altura restante (100% - 80px do header) */
 #map {
-  /* Ocupa a altura total menos os 80px do header */
   height: calc(100vh - 80px);
   width: 100%;
-  z-index: 1;
-  background-color: #e5e3df;
 }
 
-/* 5. CORREÇÃO PARA O BUG DAS TILES */
-.leaflet-container {
-  text-align: left !important;
-}
-
-/* 6. DESIGN DOS POPUPS (POSTGRES + MONGODB) */
-.map-popup {
-  min-width: 240px;
-  max-width: 300px;
-  padding: 5px;
-}
-
-.map-popup h3 {
-  margin: 0 0 8px 0;
-  color: #27ae60;
-  font-size: 1.1rem;
-  border-bottom: 2px solid #f0f0f0;
-  padding-bottom: 5px;
-}
-
-.map-popup p {
-  margin: 6px 0;
-  font-size: 0.9rem;
-  color: #34495e;
-  line-height: 1.5;
-}
-
-.map-popup b {
-  color: #2c3e50;
-}
-
-.map-popup hr {
-  border: 0;
-  border-top: 1px solid #eee;
-  margin: 10px 0;
-}
-
-.map-popup img {
-  width: 100%;
-  height: auto;
-  border-radius: 6px;
-  margin-top: 8px;
-  display: block;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-
-/* 7. RESPONSIVIDADE (PARA TELEMÓVEIS) */
-@media (max-width: 768px) {
-  .main-header {
-    flex-direction: column; /* Título em cima, seletores em baixo */
-    height: auto;
-    padding: 15px;
-  }
-
-  .controls {
-    width: 100%;
-    flex-direction: column; /* Seletores um por cima do outro em ecrãs pequenos */
-    gap: 10px;
-    margin-top: 10px;
-  }
-
-  .custom-select,
-  #trail-selector,
-  #difficulty-filter {
-    width: 100%; /* Ocupam a largura toda no telemóvel */
-  }
-
-  #map {
-    height: calc(100vh - 160px); /* Ajusta o mapa conforme o header cresce */
-  }
+/* Painel de Informação Flutuante no canto inferior esquerdo */
+.info-panel {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  width: 300px;
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  border-top: 5px solid #2ecc71;
 }

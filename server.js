@@ -1,43 +1,41 @@
 const express = require("express");
-const { Pool } = require("pg");
-const { MongoClient } = require("mongodb");
+const { Pool } = require("pg"); // Cliente para PostgreSQL
+const { MongoClient } = require("mongodb"); // Cliente para MongoDB
 const cors = require("cors");
-require("dotenv").config();
+require("dotenv").config(); // Carrega as credenciais do ficheiro .env
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-// --- 1. CONFIGURAÇÕES ---
-app.use(cors());
-app.use(express.json());
-app.use(express.static("public")); // Serve automaticamente o index.html da pasta public
+// --- CONFIGURAÇÕES ---
+app.use(cors()); // Permite que o frontend aceda à API
+app.use(express.json()); // Permite ler JSON no corpo das requisições
+app.use(express.static("public")); // Torna a pasta 'public' visível (HTML/CSS/JS)
 
-// --- 2. LIGAÇÕES ÀS BASES DE DADOS ---
-const pgPool = new Pool({
-  connectionString: process.env.PG_URL,
-});
+// --- LIGAÇÕES ÀS BASES DE DADOS ---
+// Ligação ao Postgres (Neon) usando a URL do .env
+const pgPool = new Pool({ connectionString: process.env.PG_URL });
 
+// Ligação ao MongoDB Atlas usando a URL do .env
 const mongoClient = new MongoClient(process.env.MONGO_URL);
 
 async function startDatabases() {
   try {
-    await pgPool.query("SELECT NOW()");
+    await pgPool.query("SELECT NOW()"); // Teste rápido de ligação
     console.log("✅ Ligado ao PostgreSQL Neon");
 
     await mongoClient.connect();
     console.log("✅ Ligado ao MongoDB Atlas");
   } catch (err) {
-    console.log("⚠️ Erro de ligação, mas o servidor continua a tentar...");
-    console.log("Mensagem:", err.message);
+    console.log("⚠️ Erro: Uma base de dados falhou, mas o servidor continua.");
   }
 }
 startDatabases();
 
-// --- 3. ROTAS DA API ---
+// --- ROTAS DA API ---
 
-/**
- * ROTA: Obter lista de trilhos filtrada por dificuldade
- * Usada para preencher o seletor de trilhos dinamicamente
+/** * ROTA 1: Lista nomes de trilhos filtrados por dificuldade
+ * Utilidade: Preencher o seletor (dropdown) do site
  */
 app.get("/api/trilhos/:dificuldade", async (req, res) => {
   try {
@@ -45,7 +43,7 @@ app.get("/api/trilhos/:dificuldade", async (req, res) => {
     let query = "SELECT id, nome FROM trilhos";
     let params = [];
 
-    // Se a dificuldade não for "todos", adicionamos o filtro SQL
+    // Se não for "todos", adiciona filtro WHERE na query SQL
     if (dificuldade !== "todos") {
       query += " WHERE dificuldade = $1";
       params.push(dificuldade);
@@ -58,24 +56,22 @@ app.get("/api/trilhos/:dificuldade", async (req, res) => {
   }
 });
 
-/**
- * ROTA: Obter GeoJSON completo de um trilho (Postgres + MongoDB)
+/** * ROTA 2: Trilho Completo (Híbrido)
+ * Utilidade: Junta Geometria (Postgres) com Descrição/Fotos (Mongo)
  */
 app.get("/api/trilho-completo/:id", async (req, res) => {
   try {
     const id = req.params.id;
 
-    // 1. Busca no PostgreSQL (Geometria e dados básicos)
+    // A. Busca no Postgres e converte a coluna 'geom' para formato GeoJSON
     const pgRes = await pgPool.query(
       "SELECT id, nome, dificuldade, distancia_km, ST_AsGeoJSON(geom) as geometry FROM trilhos WHERE id = $1",
       [id],
     );
 
-    if (pgRes.rows.length === 0) {
-      return res.status(404).json({ error: "Trilho não encontrado" });
-    }
+    if (pgRes.rows.length === 0) return res.status(404).send("Não encontrado");
 
-    // 2. Busca no MongoDB (Detalhes extras e fotos)
+    // B. Busca no MongoDB usando o id_externo para cruzar os dados
     let infoExtra = null;
     try {
       infoExtra = await mongoClient
@@ -83,32 +79,27 @@ app.get("/api/trilho-completo/:id", async (req, res) => {
         .collection("detalhes")
         .findOne({ id_externo: parseInt(id) });
     } catch (mErr) {
-      console.log("ℹ Info: Sem resposta do MongoDB para o ID:", id);
+      console.log("Mongo offline");
     }
 
-    // 3. Formatação para o Padrão GeoJSON (que o Leaflet entende)
+    // C. Monta a estrutura final que o mapa Leaflet exige
     const geoJSON = {
       type: "Feature",
       geometry: JSON.parse(pgRes.rows[0].geometry),
       properties: {
         nome: pgRes.rows[0].nome,
-        dificuldade: pgRes.rows[0].dificuldade,
         distancia: pgRes.rows[0].distancia_km,
+        dificuldade: pgRes.rows[0].dificuldade,
         detalhes: infoExtra || {
-          descricao: "Descrição ainda não disponível no MongoDB.",
+          descricao: "Sem descrição no Mongo.",
           fotos: [],
         },
       },
     };
-
     res.json(geoJSON);
   } catch (err) {
-    console.error("❌ Erro na API:", err.message);
-    res.status(500).json({ error: "Erro interno no servidor" });
+    res.status(500).send("Erro no servidor");
   }
 });
 
-// --- 4. INICIALIZAÇÃO ---
-app.listen(port, () => {
-  console.log(`🚀 EcoTrail ativo em http://localhost:${port}`);
-});
+app.listen(port, () => console.log(`🚀 Servidor em http://localhost:${port}`));
