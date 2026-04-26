@@ -43,19 +43,19 @@ app.get("/api/trilho-completo/:id", async (req, res) => {
   try {
     const id = req.params.id;
 
-    // A. BUSCA POSTGRES (Dados Espaciais)
+    // A. BUSCA POSTGRES - Nota: usamos 'as geometry' para o código JS não quebrar
     const pgRes = await pgPool.query(
-      "SELECT *, ST_AsGeoJSON(geom) as geometry FROM trilhos WHERE id = $1",
+      "SELECT id, nome, dificuldade, distancia_km, ST_AsGeoJSON(geom) as geometry FROM trilhos WHERE id = $1",
       [id],
     );
 
     if (pgRes.rows.length === 0) {
       return res
         .status(404)
-        .json({ error: "Trilho não encontrado no Postgres" });
+        .json({ error: `O trilho com ID ${id} não existe na base de dados.` });
     }
 
-    // B. BUSCA MONGODB (Dados Descritivos)
+    // B. BUSCA MONGODB (Mantenho a tua lógica de proteção)
     let infoExtra = null;
     try {
       infoExtra = await mongoClient
@@ -63,10 +63,10 @@ app.get("/api/trilho-completo/:id", async (req, res) => {
         .collection("detalhes")
         .findOne({ id_externo: parseInt(id) });
     } catch (mErr) {
-      console.log("ℹ Info: A ignorar MongoDB nesta resposta.");
+      console.log("ℹ Info: Sem detalhes no MongoDB para o ID:", id);
     }
 
-    // C. MONTAGEM DO GEOJSON HÍBRIDO
+    // C. MONTAGEM DO GEOJSON
     const geoJSON = {
       type: "Feature",
       geometry: JSON.parse(pgRes.rows[0].geometry),
@@ -75,8 +75,7 @@ app.get("/api/trilho-completo/:id", async (req, res) => {
         dificuldade: pgRes.rows[0].dificuldade,
         distancia: pgRes.rows[0].distancia_km,
         detalhes: infoExtra || {
-          descricao:
-            "Detalhes do MongoDB ainda não carregados para este trilho.",
+          descricao: "Detalhes do MongoDB ainda não carregados.",
           fotos: [],
         },
       },

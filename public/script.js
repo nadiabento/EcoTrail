@@ -17,22 +17,26 @@ async function carregarTrilho(id) {
   try {
     console.log(`A carregar trilho ID: ${id}...`);
     const response = await fetch(`/api/trilho-completo/${id}`);
-    const data = await response.json();
 
-    if (data.error) {
-      console.error("Erro na API:", data.error);
+    if (!response.ok) {
+      console.error("Trilho não encontrado ou erro no servidor");
       return;
     }
 
-    // Limpar camadas anteriores
+    const data = await response.json();
+    console.log("Dados recebidos com sucesso:", data);
+
+    // 1. Limpar camadas GeoJSON antigas antes de desenhar a nova
     map.eachLayer((layer) => {
-      if (layer instanceof L.GeoJSON) map.removeLayer(layer);
+      if (layer instanceof L.GeoJSON) {
+        map.removeLayer(layer);
+      }
     });
 
-    // Adicionar o GeoJSON ao mapa
+    // 2. Criar a nova camada GeoJSON
     const camadaTrilho = L.geoJSON(data, {
       style: {
-        color: "#2ecc71",
+        color: "#2ecc71", // Verde esmeralda
         weight: 6,
         opacity: 0.8,
       },
@@ -42,21 +46,26 @@ async function carregarTrilho(id) {
 
         const popupContent = `
             <div class="map-popup">
-                <h3>${props.nome || "Trilho"}</h3>
+                <h3 style="margin-bottom:5px;">${props.nome || "Trilho"}</h3>
                 <p><strong>Dificuldade:</strong> ${props.dificuldade || "N/A"}</p>
                 <p><strong>Distância:</strong> ${props.distancia || "?"} km</p>
-                <p>${mongo.descricao || "Sem descrição disponível."}</p>
-                ${
-                  mongo.fotos && mongo.fotos.length > 0
-                    ? `<img src="${mongo.fotos[0]}" style="width:100%; border-radius:5px;">`
-                    : ""
-                }
+                <hr>
+                <p>${mongo.descricao || "Sem detalhes."}</p>
             </div>`;
         layer.bindPopup(popupContent);
       },
     }).addTo(map);
 
-    map.fitBounds(camadaTrilho.getBounds(), { padding: [30, 30] });
+    // 3. O PASSO CRÍTICO: Ajustar o zoom para os novos dados
+    // Usamos um pequeno timeout para garantir que o Leaflet calculou os limites
+    setTimeout(() => {
+      const bounds = camadaTrilho.getBounds();
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [50, 50] });
+      } else {
+        console.error("Limites do trilho inválidos.");
+      }
+    }, 100);
   } catch (err) {
     console.error("Erro na comunicação com o servidor:", err);
   }
