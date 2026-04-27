@@ -102,4 +102,38 @@ app.get("/api/trilho-completo/:id", async (req, res) => {
   }
 });
 
+/** * ROTA: Obter Pontos de Interesse (POIs) de um trilho específico
+ */
+app.get("/api/pois/:trilho_id", async (req, res) => {
+  try {
+    const { trilho_id } = req.params;
+
+    // Busca os pontos, convertendo a geometria para GeoJSON
+    const query = `
+      SELECT id, nome, tipo, ST_AsGeoJSON(geom) as geometry 
+      FROM pontos_interesse 
+      WHERE id_trilho = $1
+    `;
+
+    const result = await pgPool.query(query, [trilho_id]);
+
+    // Transformamos o resultado num FeatureCollection para o Leaflet ler facilmente
+    const pois = {
+      type: "FeatureCollection",
+      features: result.rows.map((row) => ({
+        type: "Feature",
+        geometry: JSON.parse(row.geometry),
+        properties: {
+          nome: row.nome,
+          tipo: row.tipo,
+        },
+      })),
+    };
+
+    res.json(pois);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(port, () => console.log(`🚀 Servidor em http://localhost:${port}`));
