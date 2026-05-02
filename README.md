@@ -35,6 +35,8 @@ Contas ativas no Neon.tech (Postgres) e MongoDB Atlas.
 
 npm install
 
+npm install express pg mongodb dotenv cors
+
 # Iniciar o servidor
 
 npm start
