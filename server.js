@@ -76,7 +76,7 @@ app.get("/api/trilho-completo/:id", async (req, res) => {
     try {
       infoExtra = await mongoClient
         .db("ecotrail")
-        .collection("detalhes")
+        .collection("conteudos_trilhos")
         .findOne({ id_externo: parseInt(id) });
     } catch (mErr) {
       console.log("Mongo offline");

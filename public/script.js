@@ -114,7 +114,9 @@ async function carregarTrilho(id) {
     document.getElementById("info-diff").textContent =
       data.properties.dificuldade;
     document.getElementById("info-desc").textContent =
-      data.properties.detalhes.descricao;
+      data.properties.detalhes.descricao_longa ||
+      data.properties.detalhes.descricao_curta ||
+      "Sem descrição no Mongo.";
 
     // --- CHAMADA DOS POIS ---
     // Agora que o trilho carregou, vamos buscar os pontos que a Jéssica fez
