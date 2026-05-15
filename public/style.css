@@ -6,7 +6,7 @@ html {
   height: 100%;
   width: 100%;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  overflow: hidden; /* Impede que a página tenha scroll, mantendo o mapa fixo */
+  overflow: hidden;
 }
 
 /* 2. CABEÇALHO (HEADER) */
@@ -14,14 +14,14 @@ html {
   background: #ffffff;
   padding: 0 20px;
   display: flex;
-  justify-content: space-between; /* Título à esquerda, Controlos à direita */
+  justify-content: space-between;
   align-items: center;
-  border-bottom: 3px solid #2ecc71; /* Linha verde característica */
+  border-bottom: 3px solid #2ecc71;
   height: 80px;
   box-sizing: border-box;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   position: relative;
-  z-index: 1000; /* Garante que o header fica por cima do mapa */
+  z-index: 1001; /* Um pouco acima do painel para a sombra não cortar */
 }
 
 .main-title {
@@ -30,15 +30,15 @@ html {
   margin: 0;
 }
 
-/* 3. CONTROLOS (SELETORES E BOTÃO) */
+/* 3. CONTROLOS (SELETORES) */
 .controls {
   display: flex;
-  gap: 15px; /* Espaço entre os grupos de seleção */
+  gap: 15px;
 }
 
 .control-group {
   display: flex;
-  flex-direction: column; /* Label em cima da caixa de seleção */
+  flex-direction: column;
   gap: 4px;
 }
 
@@ -49,7 +49,6 @@ html {
   text-transform: uppercase;
 }
 
-/* Estilo comum para as caixas de seleção */
 .custom-select {
   padding: 8px 12px;
   border-radius: 6px;
@@ -60,70 +59,70 @@ html {
   background: white;
 }
 
-/* Botão de Informação (ℹ️) */
-.btn-icon {
-  background-color: #2ecc71;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  padding: 0 12px;
-  cursor: pointer;
-  font-size: 1.1rem;
-  transition: background 0.3s;
-}
-
-.btn-icon:hover {
-  background-color: #27ae60;
-}
-
 /* 4. MAPA */
 #map {
-  height: calc(100vh - 80px); /* Altura total menos a altura do header */
+  height: calc(100vh - 80px);
   width: 100%;
   z-index: 1;
 }
 
-/* 5. PAINEL DE INFORMAÇÃO (A JANELA QUE ABRE) */
-.info-panel {
+/* 5. PAINEL LATERAL ESQUERDO (A única janela que vais usar) */
+.painel-lateral-esquerdo {
   position: absolute;
-  bottom: 30px;
+  top: 100px; /* Abaixo do header */
   left: 20px;
+  width: 280px; /* Largura inicial (Resumo) */
+  max-height: 75vh;
   background: white;
-  padding: 20px;
+  z-index: 1000;
+  padding: 25px;
   border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  z-index: 2000; /* Prioridade máxima sobre o mapa */
-  width: 300px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  overflow-y: auto;
+  transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Animação suave */
   border-top: 6px solid #2ecc71;
-  transition: opacity 0.3s ease;
+  display: none; /* Só aparece quando selecionas um trilho */
 }
 
-.info-panel h2 {
+/* Quando clicas na linha e chamas painel.classList.add('expandido') */
+.painel-lateral-esquerdo.expandido {
+  width: 450px; /* Fica mais larga para ler a descrição grande */
+}
+
+.painel-lateral-esquerdo h2 {
   margin: 0 0 10px 0;
   font-size: 1.3rem;
   color: #2c3e50;
 }
 
-.info-content p {
-  margin: 10px 0;
-  font-size: 1rem;
-  color: #34495e;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-close {
-  margin-top: 15px;
-  width: 100%;
-  padding: 8px;
-  background: #f8f9fa;
-  border: 1px solid #ddd;
-  border-radius: 5px;
+.btn-fechar-painel {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 24px;
   cursor: pointer;
-  font-weight: bold;
+  color: #bdc3c7;
 }
 
-.btn-close:hover {
-  background: #e9ecef;
+.btn-fechar-painel:hover {
+  color: #e74c3c;
+}
+
+/* 6. ESTILOS DE TEXTO DENTRO DO PAINEL */
+#detalhes-mongo {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
