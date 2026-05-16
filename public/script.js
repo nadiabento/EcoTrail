@@ -158,13 +158,104 @@ async function carregarPOIs(trilhoId) {
         });
       },
       onEachFeature: (feature, layer) => {
+        const nomePostgres = feature.properties.nome || "Ponto de Interesse";
+
+        // Popup inicial temporário
         layer.bindPopup(
-          `<b>📍 ${feature.properties.nome}</b><br><small>${feature.properties.tipo}</small>`,
+          `<div><b>📍 ${nomePostgres}</b><br><small style="color:#7f8c8d;">A carregar detalhes do Mongo...</small></div>`,
+          {
+            className: "custom-poi-popup",
+            maxWidth: 280,
+          },
         );
+
+        // Evento de clique no marcador do POI
+        layer.on("click", async (e) => {
+          L.DomEvent.stopPropagation(e);
+
+          // --- MAPEAMENTO DO ID DO MONGO ---
+          // Procura primeiro pelo nome exato que tens na base de dados: id_externo
+          const poiIdExterno =
+            feature.properties.id_externo ||
+            feature.properties.id ||
+            feature.id;
+
+          if (poiIdExterno) {
+            await mostrarDetalhesPOI(poiIdExterno, layer, feature.properties);
+          } else {
+            console.error(
+              "Propriedades disponíveis neste ponto:",
+              feature.properties,
+            );
+            layer.setPopupContent(
+              `<div><b>📍 ${nomePostgres}</b><br><small style="color:#e74c3c;">Erro: id_externo não enviado pelo Postgres</small></div>`,
+            );
+          }
+        });
       },
     }).addTo(map);
   } catch (err) {
     console.error("Erro POIs:", err);
+  }
+}
+
+async function mostrarDetalhesPOI(idExterno, layer, propertiesPostgres) {
+  try {
+    const res = await fetch(`/api/detalhes-poi-mongo/${idExterno}`);
+    if (!res.ok) throw new Error(`Resposta do servidor: ${res.status}`);
+    const data = await res.json();
+
+    // 1. LÓGICA DA FOTO: Verifica se existem imagens e se a primeira não está vazia
+    let htmlFoto = "";
+    if (data.imagens && data.imagens.length > 0 && data.imagens[0] !== "") {
+      // Se houver foto no Mongo, desenha a imagem
+      htmlFoto = `
+        <div style="margin-top: 10px; border-radius: 8px; overflow: hidden; max-height: 120px;">
+          <img src="${data.imagens[0]}" alt="${data.nome}" style="width: 100%; height: auto; display: block; object-fit: cover;">
+        </div>
+      `;
+    } else {
+      // Se NÃO houver foto (o teu caso atual), deixa o espaço reservado elegantemente
+      htmlFoto = `
+        <div style="margin-top: 10px; border-radius: 8px; border: 1px dashed #bdc3c7; background: #f8f9fa; height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #95a5a6;">
+          <span style="font-size: 1.5em;">📸</span>
+          <span style="font-size: 0.75em; margin-top: 5px;">Sem fotografia adicionada</span>
+        </div>
+      `;
+    }
+
+    // 2. Montar o HTML final do Popup juntando a foto configurada acima
+    const conteudoPopup = `
+      <div class="poi-popup-content" style="font-family: inherit; color: #333; min-width: 240px; max-width: 280px;">
+        <h3 style="margin: 0 0 5px 0; color: #2ecc71; font-size: 1.15em;">
+          📍 ${data.nome || propertiesPostgres.nome}
+        </h3>
+        <span style="background: #e8f8f5; color: #2ecc71; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: bold; display: inline-block;">
+          ${data.tipo || propertiesPostgres.tipo}
+        </span>
+        
+        <p style="margin: 10px 0 0 0; font-size: 0.9em; line-height: 1.4; text-align: justify; color: #555; font-style: italic;">
+          "${data.descricao_curta || "Sem descrição curta disponível no MongoDB."}"
+        </p>
+        
+        ${htmlFoto}
+        
+        <div style="margin-top: 10px; font-size: 0.7em; color: #95a5a6; border-top: 1px solid #eee; padding-top: 5px; text-align: right;">
+          ID Trilho: ${data.id_trilho} | Ext: ${data.id_externo}
+        </div>
+      </div>
+    `;
+
+    layer.setPopupContent(conteudoPopup);
+  } catch (err) {
+    console.error("Erro ao carregar POI do MongoDB:", err);
+    layer.setPopupContent(`
+      <div style="font-family: inherit; color: #333;">
+        <b>📍 ${propertiesPostgres.nome || "Erro"}</b><br>
+        <small>${propertiesPostgres.tipo || ""}</small><br>
+        <span style="color: #e74c3c; font-size: 0.8em;">Não foi possível obter dados do MongoDB</span>
+      </div>
+    `);
   }
 }
 
@@ -288,15 +379,19 @@ async function mostrarDetalhesNoPainel(id) {
     if (campoDescCurta) campoDescCurta.style.display = "none";
     if (zonaMongo) zonaMongo.style.display = "block";
 
-    // --- LÓGICA DO CARROSSEL DE IMAGENS ---
-    // data.imagens corresponde ao campo Array que mostraste na primeira imagem do Atlas
+    // --- LÓGICA DO CARROSSEL DE IMAGENS ADAPTADA PARA OBJETO ---
     if (data.imagens && data.imagens.length > 0) {
       listaImagensGuardadas = data.imagens;
       indiceImagemAtual = 0;
 
-      if (imgExibida) imgExibida.src = listaImagensGuardadas[indiceImagemAtual];
-      if (zonaCarrossel) zonaCarrossel.style.display = "block";
+      // Pegamos na primeira imagem acedendo ao objeto .url
+      const primeiraImagem = listaImagensGuardadas[indiceImagemAtual];
+      if (imgExibida && primeiraImagem) {
+        // Se for um objeto, lê .url. Caso seja uma string simples (segurança), lê direto
+        imgExibida.src = primeiraImagem.url || primeiraImagem;
+      }
 
+      if (zonaCarrossel) zonaCarrossel.style.display = "block";
       atualizarContadorCarrossel();
     } else {
       if (zonaCarrossel) zonaCarrossel.style.display = "none"; // Esconde se não houver fotos
@@ -343,7 +438,11 @@ function mudarImagemCarrossel(direcao, event) {
   if (imgExibida) {
     imgExibida.style.opacity = "0.3"; // Pequeno efeito suave de transição
     setTimeout(() => {
-      imgExibida.src = listaImagensGuardadas[indiceImagemAtual];
+      const imagemAlvo = listaImagensGuardadas[indiceImagemAtual];
+      if (imagemAlvo) {
+        // CORREÇÃO: Acede ao campo .url do objeto ao passar a imagem
+        imgExibida.src = imagemAlvo.url || imagemAlvo;
+      }
       imgExibida.style.opacity = "1";
     }, 150);
   }

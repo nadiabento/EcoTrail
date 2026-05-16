@@ -19,12 +19,11 @@ module.exports = (pgPool, mongoClient) => {
     }
   });
 
-  // ROTA 2: Geometria do Trilho (Postgres)
+  // ROTA 2: Geometria do Trilho (Postgres + MongoDB para detalhes)
   router.get("/trilho-completo/:id", async (req, res) => {
     try {
       const idTrilho = parseInt(req.params.id);
 
-      // USAR pgPool em vez de pool (para bater certo com o argumento da função)
       const resultadoPostgres = await pgPool.query(
         "SELECT id, nome, distancia_km, dificuldade, ST_AsGeoJSON(ST_Transform(geom, 4326)) as geometry FROM trilhos WHERE id = $1",
         [idTrilho],
@@ -36,7 +35,6 @@ module.exports = (pgPool, mongoClient) => {
 
       const trilhoRegisto = resultadoPostgres.rows[0];
 
-      // Busca Detalhes no Mongo usando os teus nomes da imagem
       let conteudoMongo = null;
       try {
         const db = mongoClient.db("ecotrail");
@@ -49,14 +47,13 @@ module.exports = (pgPool, mongoClient) => {
         );
       }
 
-      // Devolve o GeoJSON perfeito para o Frontend
       res.json({
         type: "Feature",
         geometry: JSON.parse(trilhoRegisto.geometry),
         properties: {
           id: trilhoRegisto.id,
           nome: trilhoRegisto.nome,
-          distancia: trilhoRegisto.distancia_km, // Repara se na BD se chama distancia ou distancia_km
+          distancia: trilhoRegisto.distancia_km,
           dificuldade: trilhoRegisto.dificuldade,
           detalhes: conteudoMongo || null,
         },
@@ -67,44 +64,80 @@ module.exports = (pgPool, mongoClient) => {
     }
   });
 
-  // ROTA 3: Detalhes Extra (MongoDB)
+  // ROTA 3: Detalhes Extra do Trilho (MongoDB)
   router.get("/detalhes-mongo/:id", async (req, res) => {
     try {
       const idExterno = parseInt(req.params.id);
 
-      // Nomes exatos da tua imagem do MongoDB Atlas:
       const db = mongoClient.db("ecotrail");
       const colecao = db.collection("conteudos_trilhos");
 
       const detalhes = await colecao.findOne({ id_externo: idExterno });
 
       if (!detalhes) {
-        return res.status(404).json({ mensagem: "Não encontrado no Mongo" });
+        return res.status(404).json({ error: "Não encontrado no Mongo" });
       }
       res.json(detalhes);
     } catch (err) {
       console.error(err);
-      res.status(500).json({ erro: "Erro no MongoDB" });
+      res.status(500).json({ error: "Erro no MongoDB" });
     }
   });
 
   // ROTA 4: Pontos de Interesse (Postgres)
-  router.get("/pois/:trilho_id", async (req, res) => {
+  router.get("/pois/:trilhoId", async (req, res) => {
     try {
-      const { trilho_id } = req.params;
+      const trilhoId = parseInt(req.params.trilhoId, 10);
+
       const query = `
-                SELECT nome, tipo, ST_AsGeoJSON(ST_Transform(geom, 4326)) as geometry 
-                FROM pontos_interesse WHERE id_trilho = $1`;
-      const result = await pgPool.query(query, [trilho_id]);
-      res.json({
+        SELECT id, nome, tipo, ST_AsGeoJSON(ST_Transform(geom, 4326))::json AS geometry 
+        FROM pontos_interesse 
+        WHERE id_trilho = $1
+      `;
+
+      const resultado = await pgPool.query(query, [trilhoId]);
+
+      const geojson = {
         type: "FeatureCollection",
-        features: result.rows.map((row) => ({
+        features: resultado.rows.map((row) => ({
           type: "Feature",
-          geometry: JSON.parse(row.geometry),
-          properties: { nome: row.nome, tipo: row.tipo },
+          geometry: row.geometry,
+          properties: {
+            id_externo: row.id,
+            nome: row.nome,
+            tipo: row.tipo,
+          },
         })),
-      });
+      };
+
+      res.json(geojson);
     } catch (err) {
+      console.error("❌ ERRO NA ROTA DE POIS:", err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ROTA 5: Detalhes do POI (MongoDB - CORRIGIDA COM OS NOMES DO COMPASS)
+  router.get("/detalhes-poi-mongo/:id_externo", async (req, res) => {
+    try {
+      const idProcuro = parseInt(req.params.id_externo, 10);
+
+      const db = mongoClient.db("ecotrail");
+      // CORREÇÃO: Mudado de "pois" para "conteudos_pontos_interesse"
+      const colecao = db.collection("conteudos_pontos_interesse");
+
+      const poiMongo = await colecao.findOne({ id_externo: idProcuro });
+
+      if (!poiMongo) {
+        console.log(
+          `⚠️ POI ${idProcuro} não encontrado na coleção conteudos_pontos_interesse.`,
+        );
+        return res.status(404).json({ error: "POI não encontrado no MongoDB" });
+      }
+
+      res.json(poiMongo);
+    } catch (err) {
+      console.error("❌ Erro na Rota 5 do Mongo:", err.message);
       res.status(500).json({ error: err.message });
     }
   });

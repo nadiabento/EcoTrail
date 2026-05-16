@@ -214,6 +214,22 @@ html {
 .btn-carrossel:first-of-type { left: 5px; }
 .btn-carrossel:last-of-type { right: 5px; }
 
+/* Estilizar a janela flutuante (Popup) do POI */
+.custom-poi-popup .leaflet-popup-content-wrapper {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+.custom-poi-popup .leaflet-popup-tip {
+  background: #ffffff;
+}
+
+.custom-poi-popup .leaflet-popup-content {
+  margin: 8px 12px;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }
