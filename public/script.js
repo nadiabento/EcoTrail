@@ -3,6 +3,8 @@ let nomeTrilhoAtual = "";
 let descCurtaGuardada = "";
 let descLongaHtmlGuardado = "";
 let exibindoLonga = false;
+let listaImagensGuardadas = [];
+let indiceImagemAtual = 0;
 
 // --- 2. CONFIGURAÇÃO DE CAMADAS DO MAPA ---
 const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -262,6 +264,10 @@ async function mostrarDetalhesNoPainel(id) {
   const zonaAlternar = document.getElementById("zona-alternar");
   const btnAlternar = document.getElementById("btn-alternar-desc");
 
+  // Elementos do Carrossel
+  const zonaCarrossel = document.getElementById("zona-carrossel");
+  const imgExibida = document.getElementById("imagem-exibida");
+
   try {
     const res = await fetch(`/api/detalhes-mongo/${id}`);
     const data = await res.json();
@@ -273,7 +279,7 @@ async function mostrarDetalhesNoPainel(id) {
 
     document.getElementById("aviso-clique").style.display = "none";
 
-    // Ativar o botão no fim do texto
+    // Configurar o botão de alternar
     if (zonaAlternar) zonaAlternar.style.display = "block";
     if (btnAlternar)
       btnAlternar.textContent = "← Voltar para a descrição curta";
@@ -281,6 +287,20 @@ async function mostrarDetalhesNoPainel(id) {
 
     if (campoDescCurta) campoDescCurta.style.display = "none";
     if (zonaMongo) zonaMongo.style.display = "block";
+
+    // --- LÓGICA DO CARROSSEL DE IMAGENS ---
+    // data.imagens corresponde ao campo Array que mostraste na primeira imagem do Atlas
+    if (data.imagens && data.imagens.length > 0) {
+      listaImagensGuardadas = data.imagens;
+      indiceImagemAtual = 0;
+
+      if (imgExibida) imgExibida.src = listaImagensGuardadas[indiceImagemAtual];
+      if (zonaCarrossel) zonaCarrossel.style.display = "block";
+
+      atualizarContadorCarrossel();
+    } else {
+      if (zonaCarrossel) zonaCarrossel.style.display = "none"; // Esconde se não houver fotos
+    }
 
     descLongaHtmlGuardado = `
       <div class="animacao-fade">
@@ -300,6 +320,42 @@ async function mostrarDetalhesNoPainel(id) {
     if (infoName) infoName.textContent = nomeTrilhoAtual;
   } catch (err) {
     console.error("Erro ao carregar dados do Mongo:", err);
+  }
+}
+
+function mudarImagemCarrossel(direcao, event) {
+  if (event) event.stopPropagation(); // Evita conflitos com cliques no painel
+
+  if (listaImagensGuardadas.length === 0) return;
+
+  indiceImagemAtual += direcao;
+
+  // Se passar do fim, volta à primeira foto
+  if (indiceImagemAtual >= listaImagensGuardadas.length) {
+    indiceImagemAtual = 0;
+  }
+  // Se recuar antes da primeira, vai para a última foto
+  if (indiceImagemAtual < 0) {
+    indiceImagemAtual = listaImagensGuardadas.length - 1;
+  }
+
+  const imgExibida = document.getElementById("imagem-exibida");
+  if (imgExibida) {
+    imgExibida.style.opacity = "0.3"; // Pequeno efeito suave de transição
+    setTimeout(() => {
+      imgExibida.src = listaImagensGuardadas[indiceImagemAtual];
+      imgExibida.style.opacity = "1";
+    }, 150);
+  }
+
+  atualizarContadorCarrossel();
+}
+
+// Atualiza o pequeno texto "1 de 3"
+function atualizarContadorCarrossel() {
+  const contador = document.getElementById("contador-imagens");
+  if (contador) {
+    contador.textContent = `${indiceImagemAtual + 1} de ${listaImagensGuardadas.length}`;
   }
 }
 

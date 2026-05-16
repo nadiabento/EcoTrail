@@ -171,6 +171,49 @@ html {
   text-decoration: underline; /* Só aparece o sublinhado ao passar o rato */
 }
 
+/* --- ESTILOS DO CARROSSEL DE IMAGENS --- */
+.carrossel-container {
+  position: relative;
+  width: 100%;
+  height: 180px; /* Altura fixa elegante para o painel */
+  background: #f8f9fa;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#imagem-exibida {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* Recorta a imagem proporcionalmente sem a distorcer */
+  transition: opacity 0.3s ease;
+}
+
+.btn-carrossel {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.4);
+  color: white;
+  border: none;
+  font-size: 16px;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.2s;
+  z-index: 10;
+}
+
+.btn-carrossel:hover {
+  background: rgba(46, 204, 113, 0.8); /* Fica verde ao passar o rato */
+}
+
+/* Posicionamento das setas */
+.btn-carrossel:first-of-type { left: 5px; }
+.btn-carrossel:last-of-type { right: 5px; }
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }

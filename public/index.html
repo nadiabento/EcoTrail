@@ -61,6 +61,15 @@
              </div>
           </div>
 
+          <div id="zona-carrossel" style="display: none; margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+             <div class="carrossel-container">
+                <button class="btn-carrossel" onclick="mudarImagemCarrossel(-1, event)">&#10094;</button>
+                <img id="imagem-exibida" src="" alt="Imagem do trilho" />
+                <button class="btn-carrossel" onclick="mudarImagemCarrossel(1, event)">&#10095;</button>
+             </div>
+             <div id="contador-imagens" style="text-align: center; font-size: 0.8em; color: #7f8c8d; margin-top: 5px;"></div>
+          </div>
+
           <div id="zona-alternar" style="display: none; margin-top: 20px; text-align: right;">
              <button id="btn-alternar-desc" onclick="alternarDescricao(event)" class="botao-alternar-link"></button>
           </div>
