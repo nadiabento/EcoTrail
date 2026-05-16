@@ -7,18 +7,9 @@
   <title>EcoTrail - WebSIG Aveiro</title>
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-  <link rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css">
-
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css">
   <link rel="stylesheet" href="style.css" />
-
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-  <script
-    src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
 </head>
 
 <body>
@@ -50,34 +41,45 @@
 
   <div id="map"></div>
 
-  <div id="trail-info-panel" class="painel-lateral-esquerdo">
-    <button onclick="fecharPainel()" class="btn-fechar-painel">×</button>
-
-    <div id="resumo-trilho">
-      <h2 id="info-name"></h2>
-      <p><strong>📏 Distância:</strong> <span id="info-dist"></span></p>
-      <p><strong>📈 Dificuldade:</strong> <span id="info-diff"></span></p>
-      <p id="info-desc-curta" style="font-style: italic; color: #555; font-size: 0.95em;"></p>
+  <div id="trail-info-panel" class="painel-lateral-esquerdo" onclick="reabrirPeloHeader()">
+    
+    <div class="painel-header">
+      <h2 id="info-name">Seleciona um trilho</h2>
+      <button onclick="minimizarPainel(event)" class="btn-fechar-painel">&times;</button>
     </div>
 
-    <div id="detalhes-mongo" style="display:none; margin-top:15px; border-top:1px solid #ddd; padding-top:15px;">
-      <div id="info-desc-longa"></div>
-    </div>
+    <div id="painel-corpo">
+        <div id="resumo-trilho" style="margin-top: 15px;">
+          <p><strong>📏 Distância:</strong> <span id="info-dist"></span></p>
+          <p><strong>📈 Dificuldade:</strong> <span id="info-diff"></span></p>
+          
+          <div id="texto-descricao-conteudo" style="margin-top: 15px;">
+             <p id="info-desc-curta" style="font-style: italic; color: #555; font-size: 0.95em; margin: 0; line-height: 1.6;"></p>
+             
+             <div id="detalhes-mongo" style="display:none; border-top:1px solid #ddd; padding-top:15px; margin-top:10px;">
+                <div id="info-desc-longa"></div>
+             </div>
+          </div>
 
-    <p id="aviso-clique" style="font-size: 0.85em; color: #666; margin-top:10px;">
-      <i>💡 Clica na linha do trilho para ver mais detalhes.</i>
-    </p>
-  </div>
+          <div id="zona-alternar" style="display: none; margin-top: 20px; text-align: right;">
+             <button id="btn-alternar-desc" onclick="alternarDescricao(event)" class="botao-alternar-link"></button>
+          </div>
+        </div>
+
+        <p id="aviso-clique" style="font-size: 0.85em; color: #666; margin-top:15px;">
+          <i>💡 Clica na linha do trilho para ver mais detalhes.</i>
+        </p>
+    </div>
 
   <div id="modal-detalhes" class="modal-overlay" style="display:none;">
     <div class="modal-content">
       <span class="close-modal" onclick="fecharModal()">&times;</span>
-      <div id="conteudo-detalhes-grande">
-      </div>
+      <div id="conteudo-detalhes-grande"></div>
     </div>
   </div>
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
   <script src="script.js"></script>
 </body>
 

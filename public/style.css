@@ -9,7 +9,7 @@ html {
   overflow: hidden;
 }
 
-/* 2. CABEÇALHO (HEADER) */
+/* 2. CABEÇALHO (HEADER PRINCIPAL) */
 .main-header {
   background: #ffffff;
   padding: 0 20px;
@@ -21,7 +21,7 @@ html {
   box-sizing: border-box;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   position: relative;
-  z-index: 1001; /* Um pouco acima do painel para a sombra não cortar */
+  z-index: 1001; /* Fica acima do painel para a sombra ser contínua */
 }
 
 .main-title {
@@ -66,63 +66,116 @@ html {
   z-index: 1;
 }
 
-/* 5. PAINEL LATERAL ESQUERDO (A única janela que vais usar) */
+/* 5. PAINEL LATERAL ESQUERDO */
 .painel-lateral-esquerdo {
   position: absolute;
-  top: 100px; /* Abaixo do header */
+  top: 100px; /* Alterado para 100px para não ficar colado nem tapado pelo header principal */
   left: 20px;
-  width: 280px; /* Largura inicial (Resumo) */
-  max-height: 75vh;
+  width: 320px;
+  max-height: calc(100vh - 160px);
   background: white;
-  z-index: 1000;
-  padding: 25px;
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  overflow-y: auto;
-  transition: width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Animação suave */
-  border-top: 6px solid #2ecc71;
-  display: none; /* Só aparece quando selecionas um trilho */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  overflow: hidden; 
+  transition: width 0.3s ease, max-height 0.3s ease;
+  display: none; /* Controlado pelo JS (aparece ao escolher o trilho) */
 }
 
-/* Quando clicas na linha e chamas painel.classList.add('expandido') */
-.painel-lateral-esquerdo.expandido {
-  width: 450px; /* Fica mais larga para ler a descrição grande */
+/* Topo do painel com a borda verde característica */
+.painel-header {
+  background: #ffffff;
+  border-top: 6px solid #2ecc71; 
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: default;
 }
 
-.painel-lateral-esquerdo h2 {
-  margin: 0 0 10px 0;
-  font-size: 1.3rem;
+.painel-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
   color: #2c3e50;
+  font-weight: 700;
+  white-space: normal; 
+  word-wrap: break-word;
+}
+/* Corpo interno com scroll independente */
+#painel-corpo {
+  padding: 0 20px 20px 20px;
+  overflow-y: auto;
+  max-height: calc(100vh - 230px);
+  box-sizing: border-box;
 }
 
+/* Botão de Fechar (X) */
 .btn-fechar-painel {
-  position: absolute;
-  top: 10px;
-  right: 15px;
   background: none;
   border: none;
   font-size: 24px;
   cursor: pointer;
   color: #bdc3c7;
+  transition: color 0.2s, transform 0.2s;
+  padding: 0;
+  line-height: 1;
 }
 
 .btn-fechar-painel:hover {
   color: #e74c3c;
+  transform: scale(1.1);
 }
 
-/* 6. ESTILOS DE TEXTO DENTRO DO PAINEL */
+/* --- ESTADO EXPANDIDO (Ao clicar na linha) --- */
+.painel-lateral-esquerdo.expandido {
+  width: 480px;
+}
+
+/* --- ESTADO MINIMIZADO (A tua barra de cabeçalho idêntica à foto) --- */
+.painel-lateral-esquerdo.minimizado {
+  max-height: 80px !important;
+  width: auto;
+  max-width: 450px;
+  cursor: pointer;
+}
+
+.painel-lateral-esquerdo.minimizado #painel-corpo {
+  display: none !important; /* Esconde o texto e as margens de forma absoluta */
+}
+
+.painel-lateral-esquerdo.minimizado .btn-fechar-painel {
+  display: none !important; /* Oculta o X para evitar cliques acidentais */
+}
+
+/* 6. ESTILOS DE TEXTO E ANIMAÇÕES */
 #detalhes-mongo {
   margin-top: 15px;
   padding-top: 15px;
   border-top: 1px solid #eee;
-  animation: fadeIn 0.5s ease;
+}
+
+.botao-alternar-link {
+  background: none;
+  border: none;
+  color: #7f8c8d; /* Cinza suave e profissional */
+  font-size: 0.85em;
+  cursor: pointer;
+  padding: 5px 0;
+  font-family: inherit;
+  transition: color 0.2s ease;
+}
+
+/* Quando passas o rato por cima, ele ganha destaque com o verde do EcoTrail */
+.botao-alternar-link:hover {
+  color: #2ecc71; 
+  text-decoration: underline; /* Só aparece o sublinhado ao passar o rato */
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animacao-fade {
+  animation: fadeIn 0.4s ease forwards;
 }
