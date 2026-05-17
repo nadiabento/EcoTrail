@@ -117,13 +117,12 @@ module.exports = (pgPool, mongoClient) => {
     }
   });
 
-  // ROTA 5: Detalhes do POI (MongoDB - CORRIGIDA COM OS NOMES DO COMPASS)
+  // ROTA 5: Detalhes do POI (MongoDB)
   router.get("/detalhes-poi-mongo/:id_externo", async (req, res) => {
     try {
       const idProcuro = parseInt(req.params.id_externo, 10);
 
       const db = mongoClient.db("ecotrail");
-      // CORREÇÃO: Mudado de "pois" para "conteudos_pontos_interesse"
       const colecao = db.collection("conteudos_pontos_interesse");
 
       const poiMongo = await colecao.findOne({ id_externo: idProcuro });
@@ -142,5 +141,65 @@ module.exports = (pgPool, mongoClient) => {
     }
   });
 
+  // ROTA 6: CRIAR NOVO POI (POSTGRES + MONGODB INTEGRADOS - CORRIGIDA E DENTRO DO BLOCO)
+  router.post("/pois/criar", async (req, res) => {
+    try {
+      const { nome, tipo, lat, lng, id_trilho, descricao_curta } = req.body;
+
+      if (!nome || !tipo || !lat || !lng || !id_trilho) {
+        return res.status(400).json({ error: "Faltam campos obrigatórios." });
+      }
+
+      // 1. INSERÇÃO NO POSTGRESQL (Gera a geometria espacial)
+      const queryPostgres = `
+        INSERT INTO pontos_interesse (nome, tipo, id_trilho, geom)
+        VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($4, $5), 4326))
+        RETURNING id;
+      `;
+
+      const resultadoPostgres = await pgPool.query(queryPostgres, [
+        nome,
+        tipo,
+        id_trilho,
+        lng,
+        lat,
+      ]);
+
+      const novoIdExterno = resultadoPostgres.rows[0].id;
+
+      // 2. INSERÇÃO NO MONGODB AUTOMÁTICA (O valor extra para o teu projeto!)
+      try {
+        const db = mongoClient.db("ecotrail");
+        const colecao = db.collection("conteudos_pontos_interesse");
+
+        await colecao.insertOne({
+          id_externo: novoIdExterno,
+          id_trilho: id_trilho,
+          nome: nome,
+          tipo: tipo,
+          descricao_curta:
+            descricao_curta || "Sem descrição preenchida no mapa.",
+          imagens: [], // Fica pronto em formato Array para adicionares fotos mais tarde no Compass
+        });
+        console.log(
+          `✅ Documento para o POI ${novoIdExterno} criado com sucesso no MongoDB!`,
+        );
+      } catch (mongoErr) {
+        // Se o Mongo falhar por algum motivo, avisa no terminal mas não crasha a resposta do utilizador
+        console.error(
+          "⚠️ Alerta: Ponto gravado no Postgres, mas falhou a criação automática no Mongo:",
+          mongoErr.message,
+        );
+      }
+
+      // Devolve a resposta de sucesso de volta para o teu frontend
+      res.json({ success: true, novoId: novoIdExterno });
+    } catch (err) {
+      console.error("❌ Erro ao inserir POI no Postgres:", err.message);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // O return router TEM de ser a última linha antes de fechar o module.exports
   return router;
 };

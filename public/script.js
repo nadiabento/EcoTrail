@@ -5,6 +5,7 @@ let descLongaHtmlGuardado = "";
 let exibindoLonga = false;
 let listaImagensGuardadas = [];
 let indiceImagemAtual = 0;
+let modoInsercaoPoi = false;
 
 // --- 2. CONFIGURAÇÃO DE CAMADAS DO MAPA ---
 const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -45,7 +46,7 @@ const iconesPorTipo = {
   "Ponte / Passadiço": L.icon({
     ...baseIconParams,
     iconUrl:
-      "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-cyan.png",
+      "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
   }),
   Túnel: L.icon({
     ...baseIconParams,
@@ -202,20 +203,46 @@ async function carregarPOIs(trilhoId) {
 async function mostrarDetalhesPOI(idExterno, layer, propertiesPostgres) {
   try {
     const res = await fetch(`/api/detalhes-poi-mongo/${idExterno}`);
-    if (!res.ok) throw new Error(`Resposta do servidor: ${res.status}`);
+
+    // SE NÃO EXISTIR NO MONGO (Erro 404), MOSTRA OS DADOS DO POSTGRES
+    if (res.status === 404) {
+      const conteudoNovoPoi = `
+        <div class="poi-popup-content" style="font-family: inherit; color: #333; min-width: 220px; max-width: 280px;">
+          <h3 style="margin: 0 0 5px 0; color: #3498db; font-size: 1.15em;">
+            📍 ${propertiesPostgres.nome || "Novo Ponto"}
+          </h3>
+          <span style="background: #ebf5fb; color: #3498db; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: bold; display: inline-block;">
+            ${propertiesPostgres.tipo || "Geral"}
+          </span>
+          <p style="margin: 10px 0 0 0; font-size: 0.9em; line-height: 1.4; text-align: justify; color: #7f8c8d; font-style: italic;">
+            "Este ponto foi criado no mapa. Ainda não tem descrição detalhada ou fotos associadas no MongoDB."
+          </p>
+          <div style="margin-top: 10px; border-radius: 8px; border: 1px dashed #bdc3c7; background: #f8f9fa; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #95a5a6;">
+            <span style="font-size: 1.2em;">📝</span>
+            <span style="font-size: 0.75em; margin-top: 5px;">Aguardar dados do MongoDB</span>
+          </div>
+          <div style="margin-top: 10px; font-size: 0.7em; color: #95a5a6; border-top: 1px solid #eee; padding-top: 5px; text-align: right;">
+            ID Ext (Postgres): ${idExterno}
+          </div>
+        </div>
+      `;
+      // CORREÇÃO AQUI: O nome da variável agora bate certinho com a de cima!
+      layer.setPopupContent(conteudoNovoPoi);
+      return;
+    }
+
+    if (!res.ok) throw new Error(`Erro: ${res.status}`);
     const data = await res.json();
 
-    // 1. LÓGICA DA FOTO: Verifica se existem imagens e se a primeira não está vazia
+    // SE EXISTIR NO MONGO, MOSTRA A DESCRIÇÃO E A FOTO NORMALMENTE
     let htmlFoto = "";
     if (data.imagens && data.imagens.length > 0 && data.imagens[0] !== "") {
-      // Se houver foto no Mongo, desenha a imagem
       htmlFoto = `
         <div style="margin-top: 10px; border-radius: 8px; overflow: hidden; max-height: 120px;">
-          <img src="${data.imagens[0]}" alt="${data.nome}" style="width: 100%; height: auto; display: block; object-fit: cover;">
+          <img src="${data.imagens[0].url || data.imagens[0]}" alt="${data.nome}" style="width: 100%; height: auto; display: block; object-fit: cover;">
         </div>
       `;
     } else {
-      // Se NÃO houver foto (o teu caso atual), deixa o espaço reservado elegantemente
       htmlFoto = `
         <div style="margin-top: 10px; border-radius: 8px; border: 1px dashed #bdc3c7; background: #f8f9fa; height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #95a5a6;">
           <span style="font-size: 1.5em;">📸</span>
@@ -224,7 +251,6 @@ async function mostrarDetalhesPOI(idExterno, layer, propertiesPostgres) {
       `;
     }
 
-    // 2. Montar o HTML final do Popup juntando a foto configurada acima
     const conteudoPopup = `
       <div class="poi-popup-content" style="font-family: inherit; color: #333; min-width: 240px; max-width: 280px;">
         <h3 style="margin: 0 0 5px 0; color: #2ecc71; font-size: 1.15em;">
@@ -233,13 +259,10 @@ async function mostrarDetalhesPOI(idExterno, layer, propertiesPostgres) {
         <span style="background: #e8f8f5; color: #2ecc71; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: bold; display: inline-block;">
           ${data.tipo || propertiesPostgres.tipo}
         </span>
-        
         <p style="margin: 10px 0 0 0; font-size: 0.9em; line-height: 1.4; text-align: justify; color: #555; font-style: italic;">
           "${data.descricao_curta || "Sem descrição curta disponível no MongoDB."}"
         </p>
-        
         ${htmlFoto}
-        
         <div style="margin-top: 10px; font-size: 0.7em; color: #95a5a6; border-top: 1px solid #eee; padding-top: 5px; text-align: right;">
           ID Trilho: ${data.id_trilho} | Ext: ${data.id_externo}
         </div>
@@ -249,13 +272,7 @@ async function mostrarDetalhesPOI(idExterno, layer, propertiesPostgres) {
     layer.setPopupContent(conteudoPopup);
   } catch (err) {
     console.error("Erro ao carregar POI do MongoDB:", err);
-    layer.setPopupContent(`
-      <div style="font-family: inherit; color: #333;">
-        <b>📍 ${propertiesPostgres.nome || "Erro"}</b><br>
-        <small>${propertiesPostgres.tipo || ""}</small><br>
-        <span style="color: #e74c3c; font-size: 0.8em;">Não foi possível obter dados do MongoDB</span>
-      </div>
-    `);
+    layer.setPopupContent(`...`);
   }
 }
 
@@ -542,3 +559,136 @@ window.addEventListener("load", () => {
 });
 
 window.alternarDescricao = alternarDescricao;
+
+// =================================================================
+// LÓGICA DE INSERÇÃO DE POIS - JANELA POPUP PROFISSIONAL (PG + MONGO)
+// =================================================================
+
+const botaoPoiFixo = document.getElementById("btn-modo-poi");
+
+if (botaoPoiFixo) {
+  botaoPoiFixo.addEventListener("click", function (e) {
+    e.stopPropagation();
+
+    // 1. Deteta o caminho ativo no teu menu dropdown
+    const trilhoSelecionado = document.getElementById("trail-selector").value;
+    if (!trilhoSelecionado) {
+      alert("Por favor, selecione primeiro um trilho no menu superior!");
+      return;
+    }
+
+    modoInsercaoPoi = !modoInsercaoPoi;
+
+    if (modoInsercaoPoi) {
+      botaoPoiFixo.textContent = "❌ Cancelar Inserção";
+      botaoPoiFixo.style.backgroundColor = "#e74c3c";
+      document.getElementById("map").style.cursor = "crosshair";
+    } else {
+      redefinirEstadoInsercao();
+    }
+  });
+}
+
+function redefinirEstadoInsercao() {
+  modoInsercaoPoi = false;
+  if (botaoPoiFixo) {
+    botaoPoiFixo.textContent = "➕ Adicionar Ponto";
+    botaoPoiFixo.style.backgroundColor = "#3498db";
+  }
+  document.getElementById("map").style.cursor = "";
+}
+
+// 2. Evento que monta a janela bonita ao clicar no mapa
+map.on("click", function (e) {
+  if (!modoInsercaoPoi) return;
+
+  const lat = e.latlng.lat;
+  const lng = e.latlng.lng;
+  const idTrilhoAtivo = parseInt(
+    document.getElementById("trail-selector").value,
+    10,
+  );
+
+  // Criamos a estrutura HTML da nossa janela costumizada
+  const conteudoFormulario = `
+    <div class="form-novo-poi">
+      <h3>📍 Novo Ponto de Interesse</h3>
+      
+      <div class="form-group-poi">
+        <label>Nome do Ponto (PG + Mongo)</label>
+        <input type="text" id="novo-poi-nome" placeholder="Ex: Miradouro do Vouga" />
+      </div>
+      
+      <div class="form-group-poi">
+        <label>Tipo (PG + Mongo)</label>
+        <select id="novo-poi-tipo">
+          <option value="Natureza">Natureza</option>
+          <option value="Ponte / Passadiço">Ponte / Passadiço</option>
+          <option value="Início/Fim">Início/Fim</option>
+          <option value="Património">Património</option>
+          <option value="Água / Rio">Água / Rio</option>
+        </select>
+      </div>
+      
+      <div class="form-group-poi">
+        <label>Descrição Curta (Apenas MongoDB)</label>
+        <input type="text" id="novo-poi-desc" placeholder="Uma breve descrição sobre o local..." />
+      </div>
+      
+      <div class="form-poi-botoes">
+        <button class="btn-poi-salvar" onclick="submeterNovoPoi(${lat}, ${lng}, ${idTrilhoAtivo})">Gravar Ponto</button>
+        <button class="btn-poi-cancelar" onclick="map.closePopup(); redefinirEstadoInsercao();">Sair</button>
+      </div>
+    </div>
+  `;
+
+  // Abre a janela bonita no formato de um Popup do Leaflet nas coordenadas do clique
+  L.popup().setLatLng([lat, lng]).setContent(conteudoFormulario).openOn(map);
+});
+
+// 3. Função global disparada ao clicar no botão "Gravar Ponto"
+window.submeterNovoPoi = function (lat, lng, idTrilho) {
+  const nome = document.getElementById("novo-poi-nome").value;
+  const tipo = document.getElementById("novo-poi-tipo").value;
+  const descricao = document.getElementById("novo-poi-desc").value;
+
+  if (!nome || !descricao) {
+    alert("Por favor, preencha todos os campos obrigatórios!");
+    return;
+  }
+
+  const payload = {
+    nome: nome,
+    tipo: tipo,
+    descricao_curta: descricao, // Campo extraído para o MongoDB
+    lat: lat,
+    lng: lng,
+    id_trilho: idTrilho,
+  };
+
+  fetch("/api/pois/criar", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+    .then((res) => {
+      if (!res.ok) throw new Error("Erro no servidor.");
+      return res.json();
+    })
+    .then((data) => {
+      alert(
+        `Sucesso! O ponto "${nome}" foi registado no PostgreSQL e o esqueleto no MongoDB.`,
+      );
+      map.closePopup(); // Fecha o formulário
+      redefinirEstadoInsercao(); // Limpa o rato
+
+      if (typeof carregarPOIs === "function") {
+        carregarPOIs(idTrilho); // Atualiza os pins no ecrã automaticamente
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      alert("Erro ao gravar os dados nas bases de dados.");
+      redefinirEstadoInsercao();
+    });
+};

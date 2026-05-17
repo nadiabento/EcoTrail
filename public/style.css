@@ -238,3 +238,120 @@ html {
 .animacao-fade {
   animation: fadeIn 0.4s ease forwards;
 }
+/* Botão Profissional Flutuante - Posicionado no Canto Inferior Esquerdo */
+.btn-poi-mapa-profissional {
+  position: absolute;
+  bottom: 25px; /* DISTÂNCIA DO FUNDO DO MAPA: Sobe o botão para não tapar os créditos do Leaflet */
+  left: 20px;   /* DISTÂNCIA DA ESQUERDA */
+  z-index: 1000; /* Garante que fica sempre por cima do mapa */
+  background-color: #3498db; /* Mantenho o teu azul que ficou ótimo */
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-size: 0.9em;
+  font-weight: bold;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+  transition: all 0.2s ease-in-out;
+}
+
+/* Efeito quando passas o rato por cima */
+.btn-poi-mapa-profissional:hover {
+  background-color: #2980b9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+/* Efeito de clique pressionado */
+.btn-poi-mapa-profissional:active {
+  background-color: #1f618d;
+  transform: translateY(1px);
+}
+
+/* Container do Formulário dentro do Popup */
+.form-novo-poi {
+  font-family: inherit;
+  color: #2c3e50;
+  min-width: 250px;
+  padding: 5px;
+}
+
+.form-novo-poi h3 {
+  margin: 0 0 12px 0;
+  font-size: 1.15em;
+  color: #3498db;
+  border-bottom: 2px solid #ecf0f1;
+  padding-bottom: 5px;
+}
+
+/* Grupo de campos */
+.form-group-poi {
+  margin-bottom: 10px;
+}
+
+.form-group-poi label {
+  display: block;
+  font-size: 0.8em;
+  font-weight: bold;
+  margin-bottom: 4px;
+  color: #7f8c8d;
+}
+
+/* Inputs de texto e Select */
+.form-group-poi input[type="text"],
+.form-group-poi select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #bdc3c7;
+  border-radius: 5px;
+  font-size: 0.85em;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.form-group-poi input:focus,
+.form-group-poi select:focus {
+  border-color: #3498db;
+  outline: none;
+  box-shadow: 0 0 4px rgba(52, 152, 219, 0.3);
+}
+
+/* Zona dos Botões */
+.form-poi-botoes {
+  display: flex;
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.btn-poi-salvar {
+  flex: 2;
+  background-color: #2ecc71;
+  color: white;
+  border: none;
+  padding: 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+
+.btn-poi-salvar:hover { background-color: #27ae60; }
+
+.btn-poi-cancelar {
+  flex: 1;
+  background-color: #95a5a6;
+  color: white;
+  border: none;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+
+.btn-poi-cancelar:hover { background-color: #7f8c8d; }
