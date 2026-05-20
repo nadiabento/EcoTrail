@@ -1,4 +1,3 @@
-/* 1. RESET E ESTRUTURA BASE */
 body,
 html {
   margin: 0;
@@ -9,7 +8,6 @@ html {
   overflow: hidden;
 }
 
-/* 2. CABEÇALHO (HEADER PRINCIPAL) */
 .main-header {
   background: #ffffff;
   padding: 0 20px;
@@ -21,7 +19,7 @@ html {
   box-sizing: border-box;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   position: relative;
-  z-index: 1001; /* Fica acima do painel para a sombra ser contínua */
+  z-index: 1001;
 }
 
 .main-title {
@@ -30,7 +28,6 @@ html {
   margin: 0;
 }
 
-/* 3. CONTROLOS (SELETORES) */
 .controls {
   display: flex;
   gap: 15px;
@@ -59,17 +56,15 @@ html {
   background: white;
 }
 
-/* 4. MAPA */
 #map {
   height: calc(100vh - 80px);
   width: 100%;
   z-index: 1;
 }
 
-/* 5. PAINEL LATERAL ESQUERDO */
 .painel-lateral-esquerdo {
   position: absolute;
-  top: 100px; /* Alterado para 100px para não ficar colado nem tapado pelo header principal */
+  top: 100px;
   left: 20px;
   width: 320px;
   max-height: calc(100vh - 160px);
@@ -79,10 +74,9 @@ html {
   z-index: 1000;
   overflow: hidden; 
   transition: width 0.3s ease, max-height 0.3s ease;
-  display: none; /* Controlado pelo JS (aparece ao escolher o trilho) */
+  display: none;
 }
 
-/* Topo do painel com a borda verde característica */
 .painel-header {
   background: #ffffff;
   border-top: 6px solid #2ecc71; 
@@ -101,7 +95,7 @@ html {
   white-space: normal; 
   word-wrap: break-word;
 }
-/* Corpo interno com scroll independente */
+
 #painel-corpo {
   padding: 0 20px 20px 20px;
   overflow-y: auto;
@@ -109,7 +103,6 @@ html {
   box-sizing: border-box;
 }
 
-/* Botão de Fechar (X) */
 .btn-fechar-painel {
   background: none;
   border: none;
@@ -126,12 +119,10 @@ html {
   transform: scale(1.1);
 }
 
-/* --- ESTADO EXPANDIDO (Ao clicar na linha) --- */
 .painel-lateral-esquerdo.expandido {
   width: 480px;
 }
 
-/* --- ESTADO MINIMIZADO (A tua barra de cabeçalho idêntica à foto) --- */
 .painel-lateral-esquerdo.minimizado {
   max-height: 80px !important;
   width: auto;
@@ -139,25 +130,15 @@ html {
   cursor: pointer;
 }
 
-.painel-lateral-esquerdo.minimizado #painel-corpo {
-  display: none !important; /* Esconde o texto e as margens de forma absoluta */
-}
-
+.painel-lateral-esquerdo.minimizado #painel-corpo,
 .painel-lateral-esquerdo.minimizado .btn-fechar-painel {
-  display: none !important; /* Oculta o X para evitar cliques acidentais */
-}
-
-/* 6. ESTILOS DE TEXTO E ANIMAÇÕES */
-#detalhes-mongo {
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px solid #eee;
+  display: none !important;
 }
 
 .botao-alternar-link {
   background: none;
   border: none;
-  color: #7f8c8d; /* Cinza suave e profissional */
+  color: #7f8c8d;
   font-size: 0.85em;
   cursor: pointer;
   padding: 5px 0;
@@ -165,18 +146,16 @@ html {
   transition: color 0.2s ease;
 }
 
-/* Quando passas o rato por cima, ele ganha destaque com o verde do EcoTrail */
 .botao-alternar-link:hover {
   color: #2ecc71; 
-  text-decoration: underline; /* Só aparece o sublinhado ao passar o rato */
+  text-decoration: underline;
 }
 
-/* --- ESTILOS DO CARROSSEL DE IMAGENS --- */
 .carrossel-container {
   position: relative;
   width: 100%;
-  height: 180px; /* Altura fixa elegante para o painel */
-  background: #f8f9fa;
+  height: 180px; /* Altura fixa para manter a consistência do painel */
+  background: #2c3e50; /* Fundo escuro profissional para as barras de 'contain' */
   border-radius: 8px;
   overflow: hidden;
   display: flex;
@@ -185,10 +164,13 @@ html {
 }
 
 #imagem-exibida {
-  width: 100%;
-  height: 100%;
-  object-fit: cover; /* Recorta a imagem proporcionalmente sem a distorcer */
+  max-width: 100%;
+  max-height: 100%;
+  width: auto; /* Deixa a largura fluida */
+  height: auto; /* Deixa a altura fluida */
+  object-fit: contain; /* GARANTE QUE A IMAGEM INTEIRA APARECE SEM CORTES */
   transition: opacity 0.3s ease;
+  display: block;
 }
 
 .btn-carrossel {
@@ -207,14 +189,12 @@ html {
 }
 
 .btn-carrossel:hover {
-  background: rgba(46, 204, 113, 0.8); /* Fica verde ao passar o rato */
+  background: rgba(46, 204, 113, 0.8);
 }
 
-/* Posicionamento das setas */
 .btn-carrossel:first-of-type { left: 5px; }
 .btn-carrossel:last-of-type { right: 5px; }
 
-/* Estilizar a janela flutuante (Popup) do POI */
 .custom-poi-popup .leaflet-popup-content-wrapper {
   background: #ffffff;
   border-radius: 8px;
@@ -238,13 +218,13 @@ html {
 .animacao-fade {
   animation: fadeIn 0.4s ease forwards;
 }
-/* Botão Profissional Flutuante - Posicionado no Canto Inferior Esquerdo */
+
 .btn-poi-mapa-profissional {
   position: absolute;
-  bottom: 25px; /* DISTÂNCIA DO FUNDO DO MAPA: Sobe o botão para não tapar os créditos do Leaflet */
-  left: 20px;   /* DISTÂNCIA DA ESQUERDA */
-  z-index: 1000; /* Garante que fica sempre por cima do mapa */
-  background-color: #3498db; /* Mantenho o teu azul que ficou ótimo */
+  bottom: 25px;
+  left: 20px;
+  z-index: 1000;
+  background-color: #3498db;
   color: white;
   border: none;
   padding: 10px 18px;
@@ -261,20 +241,17 @@ html {
   transition: all 0.2s ease-in-out;
 }
 
-/* Efeito quando passas o rato por cima */
 .btn-poi-mapa-profissional:hover {
   background-color: #2980b9;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
 
-/* Efeito de clique pressionado */
 .btn-poi-mapa-profissional:active {
   background-color: #1f618d;
   transform: translateY(1px);
 }
 
-/* Container do Formulário dentro do Popup */
 .form-novo-poi {
   font-family: inherit;
   color: #2c3e50;
@@ -290,7 +267,6 @@ html {
   padding-bottom: 5px;
 }
 
-/* Grupo de campos */
 .form-group-poi {
   margin-bottom: 10px;
 }
@@ -303,7 +279,6 @@ html {
   color: #7f8c8d;
 }
 
-/* Inputs de texto e Select */
 .form-group-poi input[type="text"],
 .form-group-poi select {
   width: 100%;
@@ -322,7 +297,6 @@ html {
   box-shadow: 0 0 4px rgba(52, 152, 219, 0.3);
 }
 
-/* Zona dos Botões */
 .form-poi-botoes {
   display: flex;
   gap: 8px;
@@ -355,3 +329,32 @@ html {
 }
 
 .btn-poi-cancelar:hover { background-color: #7f8c8d; }
+
+/* --- ESTILOS DE IMAGENS NOS POPUPS DE POI --- */
+.poi-popup-content .zona-imagem-poi {
+    margin-top: 10px;
+    border-radius: 8px;
+    overflow: hidden;
+    max-height: 120px;
+    background: #f8f9fa; /* Fundo neutro */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.poi-popup-content .zona-imagem-poi img {
+    max-width: 100%;
+    max-height: 120px;
+    width: auto;
+    height: auto;
+    object-fit: contain; /* IMAGEM DO POI INTEIRA NO POPUP */
+    display: block;
+}
+
+/* --- ESTILOS ADICIONAIS PARA O CAMPO DE UPLOAD --- */
+.form-group-poi input[type="file"] {
+    padding: 5px;
+    border: 1px dashed #bdc3c7;
+    background: #fdfefe;
+    cursor: pointer;
+}

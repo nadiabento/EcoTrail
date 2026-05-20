@@ -1,21 +1,19 @@
 <!doctype html>
 <html lang="pt">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EcoTrail - WebSIG Aveiro</title>
-
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css">
   <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
+
   <header class="main-header">
     <h1 class="main-title">
-      <img src="LogoEcoTrail.png" style="height: 3em; vertical-align: middle; margin-right: 10px" />
+      <img src="LogoEcoTrail.png" style="height: 3em; vertical-align: middle; margin-right: 10px" alt="EcoTrail Logo"/>
       EcoTrail
     </h1>
 
@@ -31,12 +29,10 @@
       </div>
 
       <div class="control-group">
-      <label for="trail-selector">Escolha o Trilho</label>
-  
-      <select id="trail-selector" class="custom-select">
-      <option value="">-- Aguardando filtro --</option>
+        <label for="trail-selector">Escolha o Trilho</label>
+        <select id="trail-selector" class="custom-select">
+          <option value="">-- Aguardando filtro --</option>
         </select>
-  
       </div>
     </div>
   </header>
@@ -48,7 +44,6 @@
   </button>
 
   <div id="trail-info-panel" class="painel-lateral-esquerdo" onclick="reabrirPeloHeader()">
-    
     <div class="painel-header">
       <h2 id="info-name">Seleciona um trilho</h2>
       <button onclick="minimizarPainel(event)" class="btn-fechar-painel">&times;</button>
@@ -61,7 +56,6 @@
           
           <div id="texto-descricao-conteudo" style="margin-top: 15px;">
              <p id="info-desc-curta" style="font-style: italic; color: #555; font-size: 0.95em; margin: 0; line-height: 1.6;"></p>
-             
              <div id="detalhes-mongo" style="display:none; border-top:1px solid #ddd; padding-top:15px; margin-top:10px;">
                 <div id="info-desc-longa"></div>
              </div>
@@ -85,6 +79,7 @@
           <i>💡 Clica na linha do trilho para ver mais detalhes.</i>
         </p>
     </div>
+  </div>
 
   <div id="modal-detalhes" class="modal-overlay" style="display:none;">
     <div class="modal-content">
@@ -97,5 +92,4 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
   <script src="script.js"></script>
 </body>
-
 </html>

@@ -1,4 +1,3 @@
-// --- 1. VARIÁVEIS GLOBAIS DE ESTADO ---
 let nomeTrilhoAtual = "";
 let descCurtaGuardada = "";
 let descLongaHtmlGuardado = "";
@@ -7,7 +6,6 @@ let listaImagensGuardadas = [];
 let indiceImagemAtual = 0;
 let modoInsercaoPoi = false;
 
-// --- 2. CONFIGURAÇÃO DE CAMADAS DO MAPA ---
 const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "&copy; OpenStreetMap",
 });
@@ -17,7 +15,6 @@ const satellite = L.tileLayer(
   { attribution: "Tiles &copy; Esri" },
 );
 
-// --- 3. ÍCONES PARA POIS ---
 const baseIconParams = {
   iconSize: [25, 41],
   iconAnchor: [12, 41],
@@ -28,76 +25,111 @@ const baseIconParams = {
 };
 
 const iconesPorTipo = {
-  Natureza: L.icon({
+  // --- VERDE (Natureza, Flora, Fauna, Parques) ---
+  natureza: L.icon({
     ...baseIconParams,
     iconUrl:
       "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
   }),
-  Via: L.icon({
+  via: L.icon({
     ...baseIconParams,
     iconUrl:
       "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
   }),
-  Água: L.icon({
+  flora: L.icon({
+    ...baseIconParams,
+    iconUrl:
+      "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
+  }),
+  fauna: L.icon({
+    ...baseIconParams,
+    iconUrl:
+      "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
+  }),
+  "parque de lazer / merendas": L.icon({
+    ...baseIconParams,
+    iconUrl:
+      "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
+  }),
+
+  // --- AZUL (Água, Pontes, Passadiços) ---
+  água: L.icon({
     ...baseIconParams,
     iconUrl:
       "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
   }),
-  "Ponte / Passadiço": L.icon({
+  "ponte / passadiço": L.icon({
     ...baseIconParams,
     iconUrl:
       "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
   }),
-  Túnel: L.icon({
+  "ponte / monumento": L.icon({
+    ...baseIconParams,
+    iconUrl:
+      "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
+  }),
+
+  // --- PRETO (Túneis ou estruturas subterrâneas) ---
+  túnel: L.icon({
     ...baseIconParams,
     iconUrl:
       "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-black.png",
   }),
-  Miradouro: L.icon({
+
+  // --- AMARELO/LARANJA (Miradouros, Observação, Informação) ---
+  "miradouro / observatório": L.icon({
     ...baseIconParams,
     iconUrl:
       "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png",
   }),
-  "Miradouro / Observatório": L.icon({
-    ...baseIconParams,
-    iconUrl:
-      "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png",
-  }),
-  Informação: L.icon({
+  informação: L.icon({
     ...baseIconParams,
     iconUrl:
       "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-yellow.png",
   }),
-  Património: L.icon({
+
+  // --- VIOLETA/ROXO (Património, Monumentos, História) ---
+  património: L.icon({
     ...baseIconParams,
     iconUrl:
       "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png",
   }),
-  "Ruína Histórica": L.icon({
+  "património / cultural": L.icon({
     ...baseIconParams,
     iconUrl:
       "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png",
   }),
-  "Ponte / Monumento": L.icon({
+  "ruína histórica": L.icon({
     ...baseIconParams,
     iconUrl:
       "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png",
   }),
-  "Ponto de Interesse": L.icon({
+  monumento: L.icon({
+    ...baseIconParams,
+    iconUrl:
+      "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png",
+  }),
+
+  // --- VERMELHO (Pontos críticos e Genéricos) ---
+  "início/fim": L.icon({
     ...baseIconParams,
     iconUrl:
       "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
   }),
-  "Início/Fim": L.icon({
+  "ponto de interesse": L.icon({
     ...baseIconParams,
     iconUrl:
       "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
   }),
-  Infraestrutura: L.icon({
+
+  // --- CINZENTO (Infraestruturas de suporte) ---
+  infraestrutura: L.icon({
     ...baseIconParams,
     iconUrl:
       "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png",
   }),
+
+  // --- FALLBACK (Caso falte alguma coisa na BD) ---
   default: L.icon({
     ...baseIconParams,
     iconUrl:
@@ -105,7 +137,6 @@ const iconesPorTipo = {
   }),
 };
 
-// --- 4. INICIALIZAÇÃO DO MAPA ---
 const map = L.map("map", {
   center: [40.6443, -8.6455],
   zoom: 11,
@@ -116,22 +147,15 @@ const map = L.map("map", {
 L.control.zoom({ position: "bottomright" }).addTo(map);
 L.control.layers({ "🗺️ Rua": osm, "🛰️ Satélite": satellite }).addTo(map);
 
-// --- 5. FUNÇÕES DE CARREGAMENTO ---
-
 async function atualizarListaTrilhos(dificuldade) {
   try {
     const response = await fetch(`/api/trilhos/${dificuldade}`);
     const trilhos = await response.json();
-
-    // Pegar o seletor diretamente pelo ID do teu HTML
     const seletorTrilhos = document.getElementById("trail-selector");
     if (!seletorTrilhos) return;
 
-    // Limpa a lista antiga
     seletorTrilhos.innerHTML =
       '<option value="">-- Selecione um trilho --</option>';
-
-    // Adiciona os novos trilhos vindos da BD
     trilhos.forEach((t) => {
       const opt = document.createElement("option");
       opt.value = t.id;
@@ -151,46 +175,29 @@ async function carregarPOIs(trilhoId) {
 
     window.camadaPois = L.geoJSON(data, {
       pointToLayer: (feature, latlng) => {
-        const tipo = feature.properties.tipo
-          ? feature.properties.tipo.trim()
+        // Correção de String defensiva para mapear o ícone
+        const tipoChave = feature.properties.tipo
+          ? feature.properties.tipo.toLowerCase().trim()
           : "default";
         return L.marker(latlng, {
-          icon: iconesPorTipo[tipo] || iconesPorTipo["default"],
+          icon: iconesPorTipo[tipoChave] || iconesPorTipo["default"],
         });
       },
       onEachFeature: (feature, layer) => {
         const nomePostgres = feature.properties.nome || "Ponto de Interesse";
-
-        // Popup inicial temporário
         layer.bindPopup(
           `<div><b>📍 ${nomePostgres}</b><br><small style="color:#7f8c8d;">A carregar detalhes do Mongo...</small></div>`,
-          {
-            className: "custom-poi-popup",
-            maxWidth: 280,
-          },
+          { className: "custom-poi-popup", maxWidth: 280 },
         );
 
-        // Evento de clique no marcador do POI
         layer.on("click", async (e) => {
           L.DomEvent.stopPropagation(e);
-
-          // --- MAPEAMENTO DO ID DO MONGO ---
-          // Procura primeiro pelo nome exato que tens na base de dados: id_externo
           const poiIdExterno =
             feature.properties.id_externo ||
             feature.properties.id ||
             feature.id;
-
           if (poiIdExterno) {
             await mostrarDetalhesPOI(poiIdExterno, layer, feature.properties);
-          } else {
-            console.error(
-              "Propriedades disponíveis neste ponto:",
-              feature.properties,
-            );
-            layer.setPopupContent(
-              `<div><b>📍 ${nomePostgres}</b><br><small style="color:#e74c3c;">Erro: id_externo não enviado pelo Postgres</small></div>`,
-            );
           }
         });
       },
@@ -204,29 +211,21 @@ async function mostrarDetalhesPOI(idExterno, layer, propertiesPostgres) {
   try {
     const res = await fetch(`/api/detalhes-poi-mongo/${idExterno}`);
 
-    // SE NÃO EXISTIR NO MONGO (Erro 404), MOSTRA OS DADOS DO POSTGRES
     if (res.status === 404) {
       const conteudoNovoPoi = `
         <div class="poi-popup-content" style="font-family: inherit; color: #333; min-width: 220px; max-width: 280px;">
-          <h3 style="margin: 0 0 5px 0; color: #3498db; font-size: 1.15em;">
-            📍 ${propertiesPostgres.nome || "Novo Ponto"}
-          </h3>
+          <h3 style="margin: 0 0 5px 0; color: #3498db; font-size: 1.15em;">📍 ${propertiesPostgres.nome || "Novo Ponto"}</h3>
           <span style="background: #ebf5fb; color: #3498db; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: bold; display: inline-block;">
             ${propertiesPostgres.tipo || "Geral"}
           </span>
           <p style="margin: 10px 0 0 0; font-size: 0.9em; line-height: 1.4; text-align: justify; color: #7f8c8d; font-style: italic;">
             "Este ponto foi criado no mapa. Ainda não tem descrição detalhada ou fotos associadas no MongoDB."
           </p>
-          <div style="margin-top: 10px; border-radius: 8px; border: 1px dashed #bdc3c7; background: #f8f9fa; height: 80px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #95a5a6;">
-            <span style="font-size: 1.2em;">📝</span>
-            <span style="font-size: 0.75em; margin-top: 5px;">Aguardar dados do MongoDB</span>
-          </div>
           <div style="margin-top: 10px; font-size: 0.7em; color: #95a5a6; border-top: 1px solid #eee; padding-top: 5px; text-align: right;">
             ID Ext (Postgres): ${idExterno}
           </div>
         </div>
       `;
-      // CORREÇÃO AQUI: O nome da variável agora bate certinho com a de cima!
       layer.setPopupContent(conteudoNovoPoi);
       return;
     }
@@ -234,28 +233,22 @@ async function mostrarDetalhesPOI(idExterno, layer, propertiesPostgres) {
     if (!res.ok) throw new Error(`Erro: ${res.status}`);
     const data = await res.json();
 
-    // SE EXISTIR NO MONGO, MOSTRA A DESCRIÇÃO E A FOTO NORMALMENTE
-    let htmlFoto = "";
+    let htmlFoto = `
+      <div style="margin-top: 10px; border-radius: 8px; border: 1px dashed #bdc3c7; background: #f8f9fa; height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #95a5a6;">
+        <span style="font-size: 1.5em;">📸</span><span style="font-size: 0.75em; margin-top: 5px;">Sem fotografia adicionada</span>
+      </div>
+    `;
     if (data.imagens && data.imagens.length > 0 && data.imagens[0] !== "") {
       htmlFoto = `
         <div style="margin-top: 10px; border-radius: 8px; overflow: hidden; max-height: 120px;">
           <img src="${data.imagens[0].url || data.imagens[0]}" alt="${data.nome}" style="width: 100%; height: auto; display: block; object-fit: cover;">
         </div>
       `;
-    } else {
-      htmlFoto = `
-        <div style="margin-top: 10px; border-radius: 8px; border: 1px dashed #bdc3c7; background: #f8f9fa; height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #95a5a6;">
-          <span style="font-size: 1.5em;">📸</span>
-          <span style="font-size: 0.75em; margin-top: 5px;">Sem fotografia adicionada</span>
-        </div>
-      `;
     }
 
     const conteudoPopup = `
       <div class="poi-popup-content" style="font-family: inherit; color: #333; min-width: 240px; max-width: 280px;">
-        <h3 style="margin: 0 0 5px 0; color: #2ecc71; font-size: 1.15em;">
-          📍 ${data.nome || propertiesPostgres.nome}
-        </h3>
+        <h3 style="margin: 0 0 5px 0; color: #2ecc71; font-size: 1.15em;">📍 ${data.nome || propertiesPostgres.nome}</h3>
         <span style="background: #e8f8f5; color: #2ecc71; padding: 2px 8px; border-radius: 12px; font-size: 0.75em; font-weight: bold; display: inline-block;">
           ${data.tipo || propertiesPostgres.tipo}
         </span>
@@ -268,15 +261,12 @@ async function mostrarDetalhesPOI(idExterno, layer, propertiesPostgres) {
         </div>
       </div>
     `;
-
     layer.setPopupContent(conteudoPopup);
   } catch (err) {
     console.error("Erro ao carregar POI do MongoDB:", err);
-    layer.setPopupContent(`...`);
   }
 }
 
-// Carrega o resumo inicial do trilho (Postgres)
 async function carregarTrilho(id) {
   const painel = document.getElementById("trail-info-panel");
   if (!id) {
@@ -294,50 +284,28 @@ async function carregarTrilho(id) {
       "Sem descrição curta disponível.";
     exibindoLonga = false;
 
-    // Forçar o estado inicial correto (Aberto e sem classes extras)
     if (painel) {
       painel.className = "painel-lateral-esquerdo";
       painel.style.display = "block";
     }
 
-    // Validar e exibir elementos estruturais internos de forma segura
-    const painelCorpo = document.getElementById("painel-corpo");
-    if (painelCorpo) painelCorpo.style.display = "block";
+    document.getElementById("painel-corpo").style.display = "block";
+    document.querySelector(".btn-fechar-painel").style.display = "block";
+    document.getElementById("detalhes-mongo").style.display = "none";
+    document.getElementById("aviso-clique").style.display = "block";
+    document.getElementById("zona-alternar").style.display = "none";
 
-    const btnFechar = document.querySelector(".btn-fechar-painel");
-    if (btnFechar) btnFechar.style.display = "block";
+    document.getElementById("info-name").textContent = nomeTrilhoAtual;
+    const distValor =
+      data.properties?.distancia || data.properties?.distancia_km || "0";
+    document.getElementById("info-dist").textContent = distValor + " km";
+    document.getElementById("info-diff").textContent =
+      data.properties?.dificuldade || "n/a";
 
-    const detalhesMongo = document.getElementById("detalhes-mongo");
-    if (detalhesMongo) detalhesMongo.style.display = "none";
-
-    const avisoClique = document.getElementById("aviso-clique");
-    if (avisoClique) avisoClique.style.display = "block";
-
-    const zonaAlternar = document.getElementById("zona-alternar");
-    if (zonaAlternar) zonaAlternar.style.display = "none";
-
-    // Injetar dados protegidos contra valores nulos
-    const infoName = document.getElementById("info-name");
-    if (infoName) infoName.textContent = nomeTrilhoAtual;
-
-    const infoDist = document.getElementById("info-dist");
-    if (infoDist) {
-      const distValor =
-        data.properties?.distancia || data.properties?.distancia_km || "0";
-      infoDist.textContent = distValor + " km";
-    }
-
-    const infoDiff = document.getElementById("info-diff");
-    if (infoDiff) infoDiff.textContent = data.properties?.dificuldade || "n/a";
-
-    // Injetar descrição curta
     const campoDescCurta = document.getElementById("info-desc-curta");
-    if (campoDescCurta) {
-      campoDescCurta.style.display = "block";
-      campoDescCurta.textContent = descCurtaGuardada;
-    }
+    campoDescCurta.style.display = "block";
+    campoDescCurta.textContent = descCurtaGuardada;
 
-    // Desenhar a linha no mapa
     map.eachLayer((layer) => {
       if (layer instanceof L.GeoJSON && layer !== window.camadaPois)
         map.removeLayer(layer);
@@ -363,7 +331,6 @@ async function carregarTrilho(id) {
   }
 }
 
-// Expande o painel e injeta a descrição longa (MongoDB)
 async function mostrarDetalhesNoPainel(id) {
   const painel = document.getElementById("trail-info-panel");
   const zonaMongo = document.getElementById("detalhes-mongo");
@@ -371,8 +338,6 @@ async function mostrarDetalhesNoPainel(id) {
   const campoDescCurta = document.getElementById("info-desc-curta");
   const zonaAlternar = document.getElementById("zona-alternar");
   const btnAlternar = document.getElementById("btn-alternar-desc");
-
-  // Elementos do Carrossel
   const zonaCarrossel = document.getElementById("zona-carrossel");
   const imgExibida = document.getElementById("imagem-exibida");
 
@@ -386,8 +351,6 @@ async function mostrarDetalhesNoPainel(id) {
     }
 
     document.getElementById("aviso-clique").style.display = "none";
-
-    // Configurar o botão de alternar
     if (zonaAlternar) zonaAlternar.style.display = "block";
     if (btnAlternar)
       btnAlternar.textContent = "← Voltar para a descrição curta";
@@ -396,22 +359,17 @@ async function mostrarDetalhesNoPainel(id) {
     if (campoDescCurta) campoDescCurta.style.display = "none";
     if (zonaMongo) zonaMongo.style.display = "block";
 
-    // --- LÓGICA DO CARROSSEL DE IMAGENS ADAPTADA PARA OBJETO ---
     if (data.imagens && data.imagens.length > 0) {
       listaImagensGuardadas = data.imagens;
       indiceImagemAtual = 0;
-
-      // Pegamos na primeira imagem acedendo ao objeto .url
       const primeiraImagem = listaImagensGuardadas[indiceImagemAtual];
       if (imgExibida && primeiraImagem) {
-        // Se for um objeto, lê .url. Caso seja uma string simples (segurança), lê direto
         imgExibida.src = primeiraImagem.url || primeiraImagem;
       }
-
       if (zonaCarrossel) zonaCarrossel.style.display = "block";
       atualizarContadorCarrossel();
     } else {
-      if (zonaCarrossel) zonaCarrossel.style.display = "none"; // Esconde se não houver fotos
+      if (zonaCarrossel) zonaCarrossel.style.display = "none";
     }
 
     descLongaHtmlGuardado = `
@@ -425,60 +383,41 @@ async function mostrarDetalhesNoPainel(id) {
         <p>📅 <b>Melhor Época:</b> ${data.melhor_epoca || "n/a"}</p>
       </div>
     `;
-
     if (descLongaArea) descLongaArea.innerHTML = descLongaHtmlGuardado;
-
-    const infoName = document.getElementById("info-name");
-    if (infoName) infoName.textContent = nomeTrilhoAtual;
   } catch (err) {
     console.error("Erro ao carregar dados do Mongo:", err);
   }
 }
 
 function mudarImagemCarrossel(direcao, event) {
-  if (event) event.stopPropagation(); // Evita conflitos com cliques no painel
-
+  if (event) event.stopPropagation();
   if (listaImagensGuardadas.length === 0) return;
 
   indiceImagemAtual += direcao;
-
-  // Se passar do fim, volta à primeira foto
-  if (indiceImagemAtual >= listaImagensGuardadas.length) {
-    indiceImagemAtual = 0;
-  }
-  // Se recuar antes da primeira, vai para a última foto
-  if (indiceImagemAtual < 0) {
+  if (indiceImagemAtual >= listaImagensGuardadas.length) indiceImagemAtual = 0;
+  if (indiceImagemAtual < 0)
     indiceImagemAtual = listaImagensGuardadas.length - 1;
-  }
 
   const imgExibida = document.getElementById("imagem-exibida");
   if (imgExibida) {
-    imgExibida.style.opacity = "0.3"; // Pequeno efeito suave de transição
+    imgExibida.style.opacity = "0.3";
     setTimeout(() => {
       const imagemAlvo = listaImagensGuardadas[indiceImagemAtual];
-      if (imagemAlvo) {
-        // CORREÇÃO: Acede ao campo .url do objeto ao passar a imagem
-        imgExibida.src = imagemAlvo.url || imagemAlvo;
-      }
+      if (imagemAlvo) imgExibida.src = imagemAlvo.url || imagemAlvo;
       imgExibida.style.opacity = "1";
     }, 150);
   }
-
   atualizarContadorCarrossel();
 }
 
-// Atualiza o pequeno texto "1 de 3"
 function atualizarContadorCarrossel() {
   const contador = document.getElementById("contador-imagens");
-  if (contador) {
+  if (contador)
     contador.textContent = `${indiceImagemAtual + 1} de ${listaImagensGuardadas.length}`;
-  }
 }
 
-// Permite ao utilizador saltar entre a curta e a longa
 function alternarDescricao(event) {
   if (event) event.stopPropagation();
-
   const campoDescCurta = document.getElementById("info-desc-curta");
   const zonaMongo = document.getElementById("detalhes-mongo");
   const btnAlternar = document.getElementById("btn-alternar-desc");
@@ -498,79 +437,39 @@ function alternarDescricao(event) {
   }
 }
 
-// --- 6. FUNÇÕES DE MINIMIZAR E REABRIR A BARRA ---
-
 function minimizarPainel(event) {
   if (event) event.stopPropagation();
   const painel = document.getElementById("trail-info-panel");
   const titulo = document.getElementById("info-name");
   if (!painel || !titulo) return;
 
-  if (painel.classList.contains("expandido")) {
-    titulo.textContent = `${nomeTrilhoAtual} (Detalhado)`;
-  } else {
-    titulo.textContent = nomeTrilhoAtual;
-  }
-
+  titulo.textContent = painel.classList.contains("expandido")
+    ? `${nomeTrilhoAtual} (Detalhado)`
+    : nomeTrilhoAtual;
   painel.classList.add("minimizado");
 }
 
 function reabrirPeloHeader() {
   const painel = document.getElementById("trail-info-panel");
-  if (!painel) return;
-
-  if (painel.classList.contains("minimizado")) {
+  if (painel && painel.classList.contains("minimizado")) {
     painel.classList.remove("minimizado");
-
-    const painelCorpo = document.getElementById("painel-corpo");
-    if (painelCorpo) painelCorpo.style.display = "block";
-
-    const btnFechar = document.querySelector(".btn-fechar-painel");
-    if (btnFechar) btnFechar.style.display = "block";
-
-    const infoName = document.getElementById("info-name");
-    if (infoName) infoName.textContent = nomeTrilhoAtual;
+    document.getElementById("info-name").textContent = nomeTrilhoAtual;
   }
 }
 
-// --- 7. EVENTOS E INICIALIZAÇÃO ---
-const filtroDificuldade = document.getElementById("difficulty-filter");
-if (filtroDificuldade) {
-  filtroDificuldade.addEventListener("change", (e) => {
-    atualizarListaTrilhos(e.target.value);
-  });
-}
+document
+  .getElementById("difficulty-filter")
+  .addEventListener("change", (e) => atualizarListaTrilhos(e.target.value));
+document
+  .getElementById("trail-selector")
+  .addEventListener("change", (e) => carregarTrilho(e.target.value));
 
-// Quando escolhes o Trilho na lista
-const seletorTrilhoClick = document.getElementById("trail-selector");
-if (seletorTrilhoClick) {
-  seletorTrilhoClick.addEventListener("change", (e) => {
-    carregarTrilho(e.target.value);
-  });
-}
-
-// Executa imediatamente ao abrir a página para carregar "Todos os Trilhos"
 atualizarListaTrilhos("todos");
 
-window.addEventListener("load", () => {
-  setTimeout(() => {
-    if (typeof map !== "undefined") map.invalidateSize();
-  }, 500);
-});
-
-window.alternarDescricao = alternarDescricao;
-
-// =================================================================
-// LÓGICA DE INSERÇÃO DE POIS - JANELA POPUP PROFISSIONAL (PG + MONGO)
-// =================================================================
-
 const botaoPoiFixo = document.getElementById("btn-modo-poi");
-
 if (botaoPoiFixo) {
   botaoPoiFixo.addEventListener("click", function (e) {
     e.stopPropagation();
-
-    // 1. Deteta o caminho ativo no teu menu dropdown
     const trilhoSelecionado = document.getElementById("trail-selector").value;
     if (!trilhoSelecionado) {
       alert("Por favor, selecione primeiro um trilho no menu superior!");
@@ -578,7 +477,6 @@ if (botaoPoiFixo) {
     }
 
     modoInsercaoPoi = !modoInsercaoPoi;
-
     if (modoInsercaoPoi) {
       botaoPoiFixo.textContent = "❌ Cancelar Inserção";
       botaoPoiFixo.style.backgroundColor = "#e74c3c";
@@ -598,41 +496,52 @@ function redefinirEstadoInsercao() {
   document.getElementById("map").style.cursor = "";
 }
 
-// 2. Evento que monta a janela bonita ao clicar no mapa
 map.on("click", function (e) {
   if (!modoInsercaoPoi) return;
 
   const lat = e.latlng.lat;
   const lng = e.latlng.lng;
-  const idTrilhoAtivo = parseInt(
-    document.getElementById("trail-selector").value,
-    10,
-  );
+  const seletor = document.getElementById("trail-selector");
+  const idTrilhoAtivo = parseInt(seletor.value, 10);
+  const nomeTrilho = seletor.options[seletor.selectedIndex].text;
 
   // Criamos a estrutura HTML da nossa janela costumizada
   const conteudoFormulario = `
     <div class="form-novo-poi">
       <h3>📍 Novo Ponto de Interesse</h3>
+      <p style="font-size:0.8em; color:#7f8c8d; margin:-10px 0 10px 0;">A adicionar ao trilho: <b>${nomeTrilho}</b></p>
       
       <div class="form-group-poi">
-        <label>Nome do Ponto (PG + Mongo)</label>
-        <input type="text" id="novo-poi-nome" placeholder="Ex: Miradouro do Vouga" />
+        <label>Nome do Ponto (Obrigatório)</label>
+        <input type="text" id="novo-poi-nome" placeholder="Ex: Miradouro do Vouga" required />
       </div>
       
       <div class="form-group-poi">
-        <label>Tipo (PG + Mongo)</label>
+        <label>Tipo</label>
         <select id="novo-poi-tipo">
-          <option value="Natureza">Natureza</option>
-          <option value="Ponte / Passadiço">Ponte / Passadiço</option>
           <option value="Início/Fim">Início/Fim</option>
-          <option value="Património">Património</option>
-          <option value="Água / Rio">Água / Rio</option>
+          <option value="Ponte / Passadiço">Ponte / Passadiço</option>
+          <option value="Miradouro / Observatório">Miradouro / Observatório</option>
+          <option value="Água">Água</option>
+          <option value="Ponto de Interesse">Ponto de Interesse</option>
+          <option value="Ponte / Monumento">Ponte / Monumento</option>
+          <option value="Monumento">Monumento</option>
+          <option value="Ruína Histórica">Ruína Histórica</option>
+          <option value="Fauna">Fauna</option>
+          <option value="Flora">Flora</option>
+          <option value="Parque de Lazer / Merendas">Parque de Lazer / Merendas</option>
+          <option value="Património / Cultural">Património / Cultural</option>
         </select>
       </div>
       
       <div class="form-group-poi">
-        <label>Descrição Curta (Apenas MongoDB)</label>
-        <input type="text" id="novo-poi-desc" placeholder="Uma breve descrição sobre o local..." />
+        <label>Descrição Curta (Obrigatório)</label>
+        <input type="text" id="novo-poi-desc" placeholder="Uma breve descrição sobre o local..." required />
+      </div>
+
+      <div class="form-group-poi">
+        <label>Fotografia (Opcional)</label>
+        <input type="file" id="novo-poi-imagem" accept="image/png, image/jpeg" />
       </div>
       
       <div class="form-poi-botoes">
@@ -646,39 +555,51 @@ map.on("click", function (e) {
   L.popup().setLatLng([lat, lng]).setContent(conteudoFormulario).openOn(map);
 });
 
-// 3. Função global disparada ao clicar no botão "Gravar Ponto"
+// 3. Função global disparada ao clicar no botão "Gravar Ponto" (ALTERADA PARA FORMDATA)
 window.submeterNovoPoi = function (lat, lng, idTrilho) {
   const nome = document.getElementById("novo-poi-nome").value;
   const tipo = document.getElementById("novo-poi-tipo").value;
   const descricao = document.getElementById("novo-poi-desc").value;
+  const inputImagem = document.getElementById("novo-poi-imagem");
 
   if (!nome || !descricao) {
-    alert("Por favor, preencha todos os campos obrigatórios!");
+    alert("Por favor, preencha o Nome e a Descrição!");
     return;
   }
 
-  const payload = {
-    nome: nome,
-    tipo: tipo,
-    descricao_curta: descricao, // Campo extraído para o MongoDB
-    lat: lat,
-    lng: lng,
-    id_trilho: idTrilho,
-  };
+  // --- USO DE FORMDATA PARA SUPORTAR O FICHEIRO ---
+  const formData = new FormData();
+  formData.append("nome", nome);
+  formData.append("tipo", tipo);
+  formData.append("descricao_curta", descricao);
+  formData.append("lat", lat);
+  formData.append("lng", lng);
+  formData.append("id_trilho", idTrilho);
+
+  // Adiciona a imagem se houver um ficheiro selecionado
+  if (inputImagem.files && inputImagem.files[0]) {
+    formData.append("imagem_poi", inputImagem.files[0]);
+  }
+
+  // Desativa o botão para evitar múltiplos cliques
+  const btnSalvar = document.querySelector(".btn-poi-salvar");
+  if (btnSalvar) {
+    btnSalvar.disabled = true;
+    btnSalvar.textContent = "A gravar...";
+  }
 
   fetch("/api/pois/criar", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    // IMPORTANTE: Ao usar FormData, NÃO deves definir o Content-Type manualmente.
+    // O browser define automaticamente como 'multipart/form-data' com a boundary correta.
+    body: formData,
   })
     .then((res) => {
-      if (!res.ok) throw new Error("Erro no servidor.");
+      if (!res.ok) throw new Error("Erro no servidor ao criar POI.");
       return res.json();
     })
     .then((data) => {
-      alert(
-        `Sucesso! O ponto "${nome}" foi registado no PostgreSQL e o esqueleto no MongoDB.`,
-      );
+      alert(`Sucesso! O ponto "${nome}" foi registado.`);
       map.closePopup(); // Fecha o formulário
       redefinirEstadoInsercao(); // Limpa o rato
 
@@ -688,7 +609,9 @@ window.submeterNovoPoi = function (lat, lng, idTrilho) {
     })
     .catch((err) => {
       console.error(err);
-      alert("Erro ao gravar os dados nas bases de dados.");
+      alert("Erro ao gravar os dados nas bases de dados. Verifique a consola.");
       redefinirEstadoInsercao();
     });
 };
+
+window.alternarDescricao = alternarDescricao;

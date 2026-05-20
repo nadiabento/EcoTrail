@@ -1,7 +1,56 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 
 module.exports = (pgPool, mongoClient) => {
+  // CONFIGURAÇÃO DO MULTER AJUSTADA À TUA ESTRUTURA
+  const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      // Ajustado para apontar exatamente para public/imagens/pontos_interesse
+      const uploadDir = path.join(
+        __dirname,
+        "../../public/imagens/pontos_interesse",
+      );
+
+      // Cria a pasta automaticamente caso ela não exista por algum motivo
+      fs.mkdirSync(uploadDir, { recursive: true });
+      cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+      // Gera um nome seguro e único para evitar ficheiros duplicados com o mesmo nome
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    },
+  });
+
+  // Filtro de segurança para aceitar apenas formatos comuns de imagem
+  const fileFilter = (req, file, cb) => {
+    const extensoesAceites = /jpeg|jpg|png/;
+    const mimetypeAceito = extensoesAceites.test(file.mimetype);
+    const extnameAceito = extensoesAceites.test(
+      path.extname(file.originalname).toLowerCase(),
+    );
+
+    if (mimetypeAceito && extnameAceito) {
+      cb(null, true);
+    } else {
+      cb(
+        new Error(
+          "Formato inválido. Apenas são aceites ficheiros JPG, JPEG ou PNG.",
+        ),
+        false,
+      );
+    }
+  };
+
+  const upload = multer({
+    storage: storage,
+    fileFilter: fileFilter,
+    limits: { fileSize: 5 * 1024 * 1024 }, // Limite máximo de 5MB por imagem
+  });
+
   // ROTA 1: Lista para o Dropdown (Postgres)
   router.get("/trilhos/:dificuldade", async (req, res) => {
     try {
@@ -19,7 +68,7 @@ module.exports = (pgPool, mongoClient) => {
     }
   });
 
-  // ROTA 2: Geometria do Trilho (Postgres + MongoDB para detalhes)
+  // ROTA 2: Geometria do Trilho Completo (Postgres + MongoDB para detalhes)
   router.get("/trilho-completo/:id", async (req, res) => {
     try {
       const idTrilho = parseInt(req.params.id);
@@ -34,8 +83,8 @@ module.exports = (pgPool, mongoClient) => {
       }
 
       const trilhoRegisto = resultadoPostgres.rows[0];
-
       let conteudoMongo = null;
+
       try {
         const db = mongoClient.db("ecotrail");
         const colecao = db.collection("conteudos_trilhos");
@@ -68,10 +117,8 @@ module.exports = (pgPool, mongoClient) => {
   router.get("/detalhes-mongo/:id", async (req, res) => {
     try {
       const idExterno = parseInt(req.params.id);
-
       const db = mongoClient.db("ecotrail");
       const colecao = db.collection("conteudos_trilhos");
-
       const detalhes = await colecao.findOne({ id_externo: idExterno });
 
       if (!detalhes) {
@@ -84,17 +131,15 @@ module.exports = (pgPool, mongoClient) => {
     }
   });
 
-  // ROTA 4: Pontos de Interesse (Postgres)
+  // ROTA 4: Pontos de Interesse (Postgres) - Corrigida tabela para pontos_interesse
   router.get("/pois/:trilhoId", async (req, res) => {
     try {
       const trilhoId = parseInt(req.params.trilhoId, 10);
-
       const query = `
         SELECT id, nome, tipo, ST_AsGeoJSON(ST_Transform(geom, 4326))::json AS geometry 
         FROM pontos_interesse 
         WHERE id_trilho = $1
       `;
-
       const resultado = await pgPool.query(query, [trilhoId]);
 
       const geojson = {
@@ -109,7 +154,6 @@ module.exports = (pgPool, mongoClient) => {
           },
         })),
       };
-
       res.json(geojson);
     } catch (err) {
       console.error("❌ ERRO NA ROTA DE POIS:", err.message);
@@ -121,19 +165,13 @@ module.exports = (pgPool, mongoClient) => {
   router.get("/detalhes-poi-mongo/:id_externo", async (req, res) => {
     try {
       const idProcuro = parseInt(req.params.id_externo, 10);
-
       const db = mongoClient.db("ecotrail");
       const colecao = db.collection("conteudos_pontos_interesse");
-
       const poiMongo = await colecao.findOne({ id_externo: idProcuro });
 
       if (!poiMongo) {
-        console.log(
-          `⚠️ POI ${idProcuro} não encontrado na coleção conteudos_pontos_interesse.`,
-        );
         return res.status(404).json({ error: "POI não encontrado no MongoDB" });
       }
-
       res.json(poiMongo);
     } catch (err) {
       console.error("❌ Erro na Rota 5 do Mongo:", err.message);
@@ -141,22 +179,25 @@ module.exports = (pgPool, mongoClient) => {
     }
   });
 
-  // ROTA 6: CRIAR NOVO POI (POSTGRES + MONGODB INTEGRADOS - CORRIGIDA E DENTRO DO BLOCO)
-  router.post("/pois/criar", async (req, res) => {
+  // ROTA 6: Criar Novo POI (Postgres + MongoDB Integrados)
+  router.post("/pois/criar", upload.single("imagem_poi"), async (req, res) => {
     try {
       const { nome, tipo, lat, lng, id_trilho, descricao_curta } = req.body;
 
-      if (!nome || !tipo || !lat || !lng || !id_trilho) {
-        return res.status(400).json({ error: "Faltam campos obrigatórios." });
+      // Validação dos dados textuais obrigatórios do formulário
+      if (!nome || !tipo || !lat || !lng || !id_trilho || !descricao_curta) {
+        if (req.file) fs.unlinkSync(req.file.path); // Apaga a imagem se faltarem campos
+        return res
+          .status(400)
+          .json({ error: "Faltam campos obrigatórios no formulário." });
       }
 
-      // 1. INSERÇÃO NO POSTGRESQL (Gera a geometria espacial)
+      // 1. INSERÇÃO NO POSTGRESQL (Tabela: pontos_interesse)
       const queryPostgres = `
         INSERT INTO pontos_interesse (nome, tipo, id_trilho, geom)
         VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($4, $5), 4326))
         RETURNING id;
       `;
-
       const resultadoPostgres = await pgPool.query(queryPostgres, [
         nome,
         tipo,
@@ -164,42 +205,51 @@ module.exports = (pgPool, mongoClient) => {
         lng,
         lat,
       ]);
-
       const novoIdExterno = resultadoPostgres.rows[0].id;
 
-      // 2. INSERÇÃO NO MONGODB AUTOMÁTICA (O valor extra para o teu projeto!)
-      try {
-        const db = mongoClient.db("ecotrail");
-        const colecao = db.collection("conteudos_pontos_interesse");
+      // 2. ESTRUTURAÇÃO DO DOCUMENTO MONGODB
+      const db = mongoClient.db("ecotrail");
+      const colecao = db.collection("conteudos_pontos_interesse");
 
-        await colecao.insertOne({
-          id_externo: novoIdExterno,
-          id_trilho: id_trilho,
-          nome: nome,
-          tipo: tipo,
-          descricao_curta:
-            descricao_curta || "Sem descrição preenchida no mapa.",
-          imagens: [], // Fica pronto em formato Array para adicionares fotos mais tarde no Compass
-        });
+      const novoDocMongo = {
+        id_externo: novoIdExterno,
+        id_trilho: parseInt(id_trilho, 10),
+        nome: nome,
+        tipo: tipo,
+        descricao_curta: descricao_curta,
+        imagens: [], // Mantém a estrutura de array do teu projeto
+      };
+
+      // Se o utilizador submeteu uma fotografia, gera o caminho correto para o frontend ler
+      if (req.file) {
+        // Como a pasta "public" é estática, o browser só precisa do caminho a partir dela:
+        const caminhoImagemBrowser = `/imagens/pontos_interesse/${req.file.filename}`;
+
+        // Insere no array respeitando o teu padrão de objeto { url: ... }
+        novoDocMongo.imagens.push({ url: caminhoImagemBrowser });
+      }
+
+      // 3. GRAVAÇÃO NO MONGODB
+      try {
+        await colecao.insertOne(novoDocMongo);
         console.log(
-          `✅ Documento para o POI ${novoIdExterno} criado com sucesso no MongoDB!`,
+          `✅ POI ${novoIdExterno} guardado no Mongo. Imagem associada: ${req.file ? "Sim" : "Não"}`,
         );
       } catch (mongoErr) {
-        // Se o Mongo falhar por algum motivo, avisa no terminal mas não crasha a resposta do utilizador
         console.error(
-          "⚠️ Alerta: Ponto gravado no Postgres, mas falhou a criação automática no Mongo:",
+          "⚠️ Erro ao criar documento correspondente no MongoDB:",
           mongoErr.message,
         );
       }
 
-      // Devolve a resposta de sucesso de volta para o teu frontend
+      // Envia resposta de sucesso de volta ao script.js
       res.json({ success: true, novoId: novoIdExterno });
     } catch (err) {
-      console.error("❌ Erro ao inserir POI no Postgres:", err.message);
+      console.error("❌ Erro fatal na rota de criação de POI:", err.message);
+      if (req.file) fs.unlinkSync(req.file.path); // Limpa o lixo do disco se a BD falhar
       res.status(500).json({ error: err.message });
     }
   });
 
-  // O return router TEM de ser a última linha antes de fechar o module.exports
   return router;
 };
