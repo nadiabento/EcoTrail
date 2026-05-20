@@ -234,16 +234,21 @@ async function mostrarDetalhesPOI(idExterno, layer, propertiesPostgres) {
     const data = await res.json();
 
     let htmlFoto = `
-      <div style="margin-top: 10px; border-radius: 8px; border: 1px dashed #bdc3c7; background: #f8f9fa; height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #95a5a6;">
-        <span style="font-size: 1.5em;">📸</span><span style="font-size: 0.75em; margin-top: 5px;">Sem fotografia adicionada</span>
+      <div class="zona-imagem-poi" style="border: 1px dashed #bdc3c7; background: #f8f9fa; height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #95a5a6;">
+        <span style="font-size: 1.5em;">📸</span>
+        <span style="font-size: 0.75em; margin-top: 5px;">Sem fotografia adicionada</span>
       </div>
     `;
+
     if (data.imagens && data.imagens.length > 0 && data.imagens[0] !== "") {
+      // Extrai o caminho correto (seja ele o objeto .url do Mongo ou a string direta)
+      const urlImagem = data.imagens[0].url || data.imagens[0];
+
       htmlFoto = `
-        <div style="margin-top: 10px; border-radius: 8px; overflow: hidden; max-height: 120px;">
-          <img src="${data.imagens[0].url || data.imagens[0]}" alt="${data.nome}" style="width: 100%; height: auto; display: block; object-fit: cover;">
-        </div>
-      `;
+      <div class="zona-imagem-poi">
+        <img src="${urlImagem}" alt="${data.nome || "Imagem do ponto"}" />
+      </div>
+    `;
     }
 
     const conteudoPopup = `
@@ -271,10 +276,18 @@ async function carregarTrilho(id) {
   const painel = document.getElementById("trail-info-panel");
   if (!id) {
     if (painel) painel.style.display = "none";
+    // Limpa as camadas do mapa caso o utilizador selecione a opção vazia
+    map.eachLayer((layer) => {
+      if (layer instanceof L.GeoJSON && layer !== window.camadaPois) {
+        map.removeLayer(layer);
+      }
+    });
+    if (window.camadaPois) map.removeLayer(window.camadaPois);
     return;
   }
 
   try {
+    // 1. Procura os dados espaciais e propriedades base no Postgres
     const response = await fetch(`/api/trilho-completo/${id}`);
     const data = await response.json();
 
@@ -284,6 +297,7 @@ async function carregarTrilho(id) {
       "Sem descrição curta disponível.";
     exibindoLonga = false;
 
+    // 2. Repõe o estado inicial correto do Painel Lateral (Aberto, curto e sem classes extras)
     if (painel) {
       painel.className = "painel-lateral-esquerdo";
       painel.style.display = "block";
@@ -294,7 +308,9 @@ async function carregarTrilho(id) {
     document.getElementById("detalhes-mongo").style.display = "none";
     document.getElementById("aviso-clique").style.display = "block";
     document.getElementById("zona-alternar").style.display = "none";
+    document.getElementById("zona-carrossel").style.display = "none"; // Esconde fotos do trilho anterior
 
+    // Injeta os dados textuais do Postgres/Mongo Inicial
     document.getElementById("info-name").textContent = nomeTrilhoAtual;
     const distValor =
       data.properties?.distancia || data.properties?.distancia_km || "0";
@@ -306,14 +322,20 @@ async function carregarTrilho(id) {
     campoDescCurta.style.display = "block";
     campoDescCurta.textContent = descCurtaGuardada;
 
+    // =================================================================
+    // 3. LIMPA AS LINHAS ANTIGAS E DESENHA A NOVA IMEDIATAMENTE!
+    // =================================================================
     map.eachLayer((layer) => {
-      if (layer instanceof L.GeoJSON && layer !== window.camadaPois)
+      if (layer instanceof L.GeoJSON && layer !== window.camadaPois) {
         map.removeLayer(layer);
+      }
     });
 
+    // Cria a camada geográfica do novo percurso
     const camada = L.geoJSON(data, {
       style: { color: "#2ecc71", weight: 6, opacity: 0.8, cursor: "pointer" },
       onEachFeature: (feature, layer) => {
+        // Ao clicar na linha física, expande para ver os detalhes do Mongo (Longa + Carrossel)
         layer.on("click", (e) => {
           L.DomEvent.stopPropagation(e);
           mostrarDetalhesNoPainel(id);
@@ -321,13 +343,15 @@ async function carregarTrilho(id) {
       },
     }).addTo(map);
 
+    // Ajusta o zoom do mapa para enquadrar perfeitamente o novo trilho no ecrã
     if (camada.getBounds().isValid()) {
       map.fitBounds(camada.getBounds(), { padding: [50, 50] });
     }
 
+    // 4. Carrega os pontos de interesse (POIs) deste novo trilho
     carregarPOIs(id);
   } catch (err) {
-    console.error("Erro ao carregar percurso:", err);
+    console.error("Erro ao carregar percurso ao mudar no dropdown:", err);
   }
 }
 

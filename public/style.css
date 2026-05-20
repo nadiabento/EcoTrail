@@ -154,8 +154,9 @@ html {
 .carrossel-container {
   position: relative;
   width: 100%;
-  height: 180px; /* Altura fixa para manter a consistência do painel */
-  background: #2c3e50; /* Fundo escuro profissional para as barras de 'contain' */
+  height: auto;             /* Remove a altura fixa de 180px */
+  max-height: 280px;        /* Define apenas um limite máximo para não tapar o painel todo */
+  background: transparent;  /* Remove o fundo escuro, já não é preciso esconder barras */
   border-radius: 8px;
   overflow: hidden;
   display: flex;
@@ -164,13 +165,10 @@ html {
 }
 
 #imagem-exibida {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto; /* Deixa a largura fluida */
-  height: auto; /* Deixa a altura fluida */
-  object-fit: contain; /* GARANTE QUE A IMAGEM INTEIRA APARECE SEM CORTES */
-  transition: opacity 0.3s ease;
+  width: 100%;              /* Ocupa a largura total disponível do painel */
+  height: auto;             /* A altura calcula-se sozinha com base na foto real */
   display: block;
+  object-fit: scale-down;   /* Garante que imagens gigantes se adaptam sem deformar */
 }
 
 .btn-carrossel {
@@ -331,23 +329,32 @@ html {
 .btn-poi-cancelar:hover { background-color: #7f8c8d; }
 
 /* --- ESTILOS DE IMAGENS NOS POPUPS DE POI --- */
+
+.leaflet-popup-content-wrapper {
+    max-width: 320px !important; /* Define uma largura máxima confortável para a caixinha */
+}
+
+/* O container geral do conteúdo do teu popup */
+.poi-popup-content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 .poi-popup-content .zona-imagem-poi {
     margin-top: 10px;
     border-radius: 8px;
     overflow: hidden;
-    max-height: 120px;
-    background: #f8f9fa; /* Fundo neutro */
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    height: auto;            /* Remove os 120px fixos */
+    max-height: 180px;       /* Limite para o popup do mapa não ficar gigante */
+    background: transparent; /* Sem fundo artificial */
+    display: block;
 }
 
 .poi-popup-content .zona-imagem-poi img {
-    max-width: 100%;
-    max-height: 120px;
-    width: auto;
-    height: auto;
-    object-fit: contain; /* IMAGEM DO POI INTEIRA NO POPUP */
+    width: 100%;             /* Adapta-se à largura do popup do Leaflet */
+    height: auto;            /* Altura proporcional e real da imagem */
     display: block;
 }
 
