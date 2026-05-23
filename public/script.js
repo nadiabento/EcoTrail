@@ -769,7 +769,6 @@ async function calcularPoisProximos(event) {
       return;
     }
 
-    // ADICIONADO: Enviamos também o id_trilho na rota!
     const url = `/api/pois/proximos-ponto?lat=${pontoCliqueCoords.lat}&lng=${pontoCliqueCoords.lng}&raio=${raioMetros}&id_trilho=${trilhoId}`;
 
     const response = await fetch(url);
@@ -794,8 +793,9 @@ async function calcularPoisProximos(event) {
     btn.style.backgroundColor = "#9b59b6";
     btn.textContent = "🔍 Calcular a partir do Ponto";
   } catch (err) {
-    console.error("Erro detalhado no fetch:", err);
-    alert("Erro ao comunicar com o servidor.");
+    // IMPORTANTE: Mudamos isto para veres o erro real na consola caso algo falhe!
+    console.error("Erro real detetado no JS do Frontend:", err);
+    alert("Erro na renderização dos dados. Verifica a consola (F12).");
     btn.disabled = false;
     btn.style.backgroundColor = "#9b59b6";
     btn.textContent = "🔍 Calcular a partir do Ponto";
