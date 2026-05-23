@@ -8,24 +8,19 @@ module.exports = (pgPool, mongoClient) => {
   // CONFIGURAÇÃO DO MULTER AJUSTADA À TUA ESTRUTURA
   const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-      // Ajustado para apontar exatamente para public/imagens/pontos_interesse
       const uploadDir = path.join(
         __dirname,
         "../../public/imagens/pontos_interesse",
       );
-
-      // Cria a pasta automaticamente caso ela não exista por algum motivo
       fs.mkdirSync(uploadDir, { recursive: true });
       cb(null, uploadDir);
     },
     filename: function (req, file, cb) {
-      // Gera um nome seguro e único para evitar ficheiros duplicados com o mesmo nome
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       cb(null, uniqueSuffix + path.extname(file.originalname));
     },
   });
 
-  // Filtro de segurança para aceitar apenas formatos comuns de imagem
   const fileFilter = (req, file, cb) => {
     const extensoesAceites = /jpeg|jpg|png/;
     const mimetypeAceito = extensoesAceites.test(file.mimetype);
@@ -48,7 +43,7 @@ module.exports = (pgPool, mongoClient) => {
   const upload = multer({
     storage: storage,
     fileFilter: fileFilter,
-    limits: { fileSize: 5 * 1024 * 1024 }, // Limite máximo de 5MB por imagem
+    limits: { fileSize: 5 * 1024 * 1024 },
   });
 
   // ROTA 1: Lista para o Dropdown (Postgres)
@@ -131,10 +126,16 @@ module.exports = (pgPool, mongoClient) => {
     }
   });
 
-  // ROTA 4: Pontos de Interesse (Postgres) - Corrigida tabela para pontos_interesse
+  // ROTA 4: Pontos de Interesse (Postgres)
   router.get("/pois/:trilhoId", async (req, res) => {
     try {
       const trilhoId = parseInt(req.params.trilhoId, 10);
+
+      // SE O FRONTEND ENVIAR NAN, RESPONDEMOS LOGO GEOJSON VAZIO SEM IR AO POSTGRES
+      if (isNaN(trilhoId)) {
+        return res.json({ type: "FeatureCollection", features: [] });
+      }
+
       const query = `
         SELECT id, nome, tipo, ST_AsGeoJSON(ST_Transform(geom, 4326))::json AS geometry 
         FROM pontos_interesse 
@@ -184,15 +185,13 @@ module.exports = (pgPool, mongoClient) => {
     try {
       const { nome, tipo, lat, lng, id_trilho, descricao_curta } = req.body;
 
-      // Validação dos dados textuais obrigatórios do formulário
       if (!nome || !tipo || !lat || !lng || !id_trilho || !descricao_curta) {
-        if (req.file) fs.unlinkSync(req.file.path); // Apaga a imagem se faltarem campos
+        if (req.file) fs.unlinkSync(req.file.path);
         return res
           .status(400)
           .json({ error: "Faltam campos obrigatórios no formulário." });
       }
 
-      // 1. INSERÇÃO NO POSTGRESQL (Tabela: pontos_interesse)
       const queryPostgres = `
         INSERT INTO pontos_interesse (nome, tipo, id_trilho, geom)
         VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($4, $5), 4326))
@@ -207,7 +206,6 @@ module.exports = (pgPool, mongoClient) => {
       ]);
       const novoIdExterno = resultadoPostgres.rows[0].id;
 
-      // 2. ESTRUTURAÇÃO DO DOCUMENTO MONGODB
       const db = mongoClient.db("ecotrail");
       const colecao = db.collection("conteudos_pontos_interesse");
 
@@ -217,37 +215,109 @@ module.exports = (pgPool, mongoClient) => {
         nome: nome,
         tipo: tipo,
         descricao_curta: descricao_curta,
-        imagens: [], // Mantém a estrutura de array do teu projeto
+        imagens: [],
       };
 
-      // Se o utilizador submeteu uma fotografia, gera o caminho correto para o frontend ler
       if (req.file) {
-        // Como a pasta "public" é estática, o browser só precisa do caminho a partir dela:
         const caminhoImagemBrowser = `/imagens/pontos_interesse/${req.file.filename}`;
-
-        // Insere no array respeitando o teu padrão de objeto { url: ... }
         novoDocMongo.imagens.push({ url: caminhoImagemBrowser });
       }
 
-      // 3. GRAVAÇÃO NO MONGODB
       try {
         await colecao.insertOne(novoDocMongo);
-        console.log(
-          `✅ POI ${novoIdExterno} guardado no Mongo. Imagem associada: ${req.file ? "Sim" : "Não"}`,
-        );
+        console.log(`✅ POI ${novoIdExterno} guardado no Mongo.`);
       } catch (mongoErr) {
-        console.error(
-          "⚠️ Erro ao criar documento correspondente no MongoDB:",
-          mongoErr.message,
-        );
+        console.error("⚠️ Erro no MongoDB:", mongoErr.message);
       }
 
-      // Envia resposta de sucesso de volta ao script.js
       res.json({ success: true, novoId: novoIdExterno });
     } catch (err) {
       console.error("❌ Erro fatal na rota de criação de POI:", err.message);
-      if (req.file) fs.unlinkSync(req.file.path); // Limpa o lixo do disco se a BD falhar
+      if (req.file) fs.unlinkSync(req.file.path);
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ROTA 7: ANÁLISE ESPACIAL - TRILHO INTEIRO (OPCIONAL)
+  // =================================================================
+  router.get("/trilhos/:id/pois-proximos", async (req, res) => {
+    const trilhoId = parseInt(req.params.id, 10);
+    const raioMetros = parseInt(req.query.raio, 10) || 500;
+
+    try {
+      const queryProximidade = `
+        SELECT p.id, p.nome, p.tipo,
+               ROUND(ST_Distance(ST_Transform(t.geom, 3763), ST_Transform(p.geom, 3763))::numeric, 1) as distancia_metros
+        FROM pontos_interesse p
+        CROSS JOIN trilhos t
+        WHERE t.id = $1
+          AND ST_DWithin(ST_Transform(t.geom, 3763), ST_Transform(p.geom, 3763), $2)
+        ORDER BY distancia_metros ASC;
+      `;
+      const resultado = await pgPool.query(queryProximidade, [
+        trilhoId,
+        raioMetros,
+      ]);
+      res.json({ sucesso: true, pontos: resultado.rows });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ROTA 8: ANÁLISE ESPACIAL POR CLIQUE
+
+  router.get("/pois/proximos-ponto", async (req, res) => {
+    const lat = parseFloat(req.query.lat);
+    const lng = parseFloat(req.query.lng);
+    const raioMetros = parseInt(req.query.raio, 10) || 500;
+    const idTrilho = parseInt(req.query.id_trilho, 10);
+
+    if (isNaN(lat) || isNaN(lng)) {
+      return res.status(400).json({ error: "Coordenadas lat/lng inválidas." });
+    }
+
+    try {
+      let queryPontoEspacial = `
+        SELECT id, nome, tipo,
+               ROUND(ST_Distance(
+                 ST_Transform(ST_SetSRID(ST_MakePoint($1, $2), 4326), 3763), 
+                 ST_Transform(ST_SetSRID(geom, 4326), 3763)
+               )::numeric, 1) as distancia_metros
+        FROM pontos_interesse
+        WHERE ST_DWithin(
+          ST_Transform(ST_SetSRID(ST_MakePoint($1, $2), 4326), 3763),
+          ST_Transform(ST_SetSRID(geom, 4326), 3763),
+          $3
+        )
+      `;
+
+      const params = [lng, lat, raioMetros];
+
+      if (!isNaN(idTrilho)) {
+        queryPontoEspacial += ` AND id_trilho = $4`;
+        params.push(idTrilho);
+      }
+
+      queryPontoEspacial += ` ORDER BY distancia_metros ASC;`;
+
+      console.log(
+        `[PostGIS] Filtro ativo para o Trilho ID: ${idTrilho} em Lat: ${lat}, Lng: ${lng}`,
+      );
+
+      const resultado = await pgPool.query(queryPontoEspacial, params);
+      console.log(
+        `[PostGIS] Sucesso! Encontrados ${resultado.rows.length} pontos.`,
+      );
+
+      res.json({
+        sucesso: true,
+        raio_pesquisa: raioMetros,
+        total: resultado.rows.length,
+        pontos: resultado.rows,
+      });
+    } catch (err) {
+      console.error("❌ ERRO INTERNO POSTGIS NA ROTA 7.5:", err.message);
+      res.status(500).json({ error: "Erro na análise espacial do ponto." });
     }
   });
 

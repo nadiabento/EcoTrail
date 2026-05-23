@@ -1,19 +1,22 @@
 <!doctype html>
 <html lang="pt">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EcoTrail - WebSIG Aveiro</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css">
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css">
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
 
   <header class="main-header">
     <h1 class="main-title">
-      <img src="LogoEcoTrail.png" style="height: 3em; vertical-align: middle; margin-right: 10px" alt="EcoTrail Logo"/>
+      <img src="LogoEcoTrail.png" style="height: 3em; vertical-align: middle; margin-right: 10px" alt="EcoTrail Logo" />
       EcoTrail
     </h1>
 
@@ -50,34 +53,61 @@
     </div>
 
     <div id="painel-corpo">
-        <div id="resumo-trilho" style="margin-top: 15px;">
-          <p><strong>📏 Distância:</strong> <span id="info-dist"></span></p>
-          <p><strong>📈 Dificuldade:</strong> <span id="info-diff"></span></p>
-          
-          <div id="texto-descricao-conteudo" style="margin-top: 15px;">
-             <p id="info-desc-curta" style="font-style: italic; color: #555; font-size: 0.95em; margin: 0; line-height: 1.6;"></p>
-             <div id="detalhes-mongo" style="display:none; border-top:1px solid #ddd; padding-top:15px; margin-top:10px;">
-                <div id="info-desc-longa"></div>
-             </div>
-          </div>
+      <div id="resumo-trilho" style="margin-top: 15px;">
+        <p><strong>📏 Distância:</strong> <span id="info-dist"></span></p>
+        <p><strong>📈 Dificuldade:</strong> <span id="info-diff"></span></p>
 
-          <div id="zona-carrossel" style="display: none; margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
-             <div class="carrossel-container">
-                <button class="btn-carrossel" onclick="mudarImagemCarrossel(-1, event)">&#10094;</button>
-                <img id="imagem-exibida" src="" alt="Imagem do trilho" />
-                <button class="btn-carrossel" onclick="mudarImagemCarrossel(1, event)">&#10095;</button>
-             </div>
-             <div id="contador-imagens" style="text-align: center; font-size: 0.8em; color: #7f8c8d; margin-top: 5px;"></div>
-          </div>
-
-          <div id="zona-alternar" style="display: none; margin-top: 20px; text-align: right;">
-             <button id="btn-alternar-desc" onclick="alternarDescricao(event)" class="botao-alternar-link"></button>
+        <div id="texto-descricao-conteudo" style="margin-top: 15px;">
+          <p id="info-desc-curta"
+            style="font-style: italic; color: #555; font-size: 0.95em; margin: 0; line-height: 1.6;"></p>
+          <div id="detalhes-mongo" style="display:none; border-top:1px solid #ddd; padding-top:15px; margin-top:10px;">
+            <div id="info-desc-longa"></div>
           </div>
         </div>
 
-        <p id="aviso-clique" style="font-size: 0.85em; color: #666; margin-top:15px;">
-          <i>💡 Clica na linha do trilho para ver mais detalhes.</i>
-        </p>
+        <div id="zona-carrossel"
+          style="display: none; margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+          <div class="carrossel-container">
+            <button class="btn-carrossel" onclick="mudarImagemCarrossel(-1, event)">&#10094;</button>
+            <img id="imagem-exibida" src="" alt="Imagem do trilho" />
+            <button class="btn-carrossel" onclick="mudarImagemCarrossel(1, event)">&#10095;</button>
+          </div>
+          <div id="contador-imagens" style="text-align: center; font-size: 0.8em; color: #7f8c8d; margin-top: 5px;">
+          </div>
+        </div>
+
+        <div id="zona-alternar" style="display: none; margin-top: 20px; text-align: right;">
+          <button id="btn-alternar-desc" onclick="alternarDescricao(event)" class="botao-alternar-link"></button>
+        </div>
+      </div>
+
+      <p id="aviso-clique" style="font-size: 0.85em; color: #666; margin-top:15px;">
+        <i>💡 Clica na linha do trilho para ver mais detalhes.</i>
+      </p>
+
+      <div id="zona-filtros-poi" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+        <label style="font-weight: bold; color: #2c3e50; display: block; margin-bottom: 10px;">
+          🔍 Filtrar Pontos por Categoria
+        </label>
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9em; cursor: pointer;">
+            <input type="checkbox" class="filtro-poi-check" value="natureza" checked> 🟢 Natureza / Miradouros
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9em; cursor: pointer;">
+            <input type="checkbox" class="filtro-poi-check" value="agua" checked> 🔵 Água / Pontes / Passadiços
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9em; cursor: pointer;">
+            <input type="checkbox" class="filtro-poi-check" value="patrimonio" checked> 🟣 Património / Histórico
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9em; cursor: pointer;">
+            <input type="checkbox" class="filtro-poi-check" value="geral" checked> 🟡 Pontos de Interesse / Informação
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.9em; cursor: pointer;">
+            <input type="checkbox" class="filtro-poi-check" value="critico" checked> 🔴 Início / Fim do Trilho
+          </label>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -88,8 +118,54 @@
     </div>
   </div>
 
+  <div id="painel-analise-direita"
+    style="position: absolute; top: 180px; right: 20px; z-index: 1000; background: white; padding: 12px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); width: 230px; font-family: inherit;">
+    <h3
+      style="margin: 0 0 8px 0; color: #8e44ad; font-size: 1em; display: flex; align-items: center; gap: 6px; border-bottom: 2px solid #f1f3f5; padding-bottom: 5px;">
+      ⚡ Proximidade por Clique
+    </h3>
+
+    <p style="font-size: 0.75em; color: #7f8c8d; margin: 0 0 8px 0; line-height: 1.3;">
+      📌 <i>Dica: Clica no mapa para fixar a tua posição.</i>
+    </p>
+
+    <div
+      style="background: #f1f3f5; padding: 6px; border-radius: 4px; font-size: 0.7em; color: #34495e; margin-bottom: 10px; font-family: monospace;"
+      id="coordenadas-clique">
+      Ponto: Nenhum selecionado
+    </div>
+
+    <div class="form-group-poi" style="margin-bottom: 10px;">
+      <label style="font-size: 0.75em; font-weight: bold; color: #7f8c8d; display: block; margin-bottom: 4px;">Raio de
+        Pesquisa</label>
+      <select id="raio-distancia-postgis"
+        style="width: 100%; padding: 5px; border: 1px solid #ccd1d1; border-radius: 4px; font-size: 0.85em; cursor: pointer;">
+        <option value="200">200 metros</option>
+        <option value="500" selected>500 metros</option>
+        <option value="1000">1000 metros (1 km)</option>
+      </select>
+    </div>
+
+    <button id="btn-calcular-proximidade"
+      style="width: 100%; background: #9b59b6; color: white; border: none; padding: 8px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 0.8em;"
+      onclick="calcularPoisProximos(event)">
+      🔍 Calcular a partir do Ponto
+    </button>
+
+    <div id="lista-pois-proximos"
+      style="display: none; background: #f8f9fa; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; margin-top: 8px; max-height: 160px; overflow-y: auto;">
+      <div
+        style="font-size: 0.7em; font-weight: bold; color: #7f8c8d; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
+        POIs mais próximos:</div>
+      <ul id="ul-pois-proximos"
+        style="margin: 0; padding-left: 15px; font-size: 0.75em; color: #2c3e50; line-height: 1.4;"></ul>
+    </div>
+  </div>
+
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
   <script src="script.js"></script>
 </body>
+
 </html>

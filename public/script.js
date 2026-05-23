@@ -5,6 +5,11 @@ let exibindoLonga = false;
 let listaImagensGuardadas = [];
 let indiceImagemAtual = 0;
 let modoInsercaoPoi = false;
+let pontoCliqueCoords = null; // Guarda { lat, lng } do clique
+let marcadorClique = null; // Guarda o pin temporário do mapa
+
+// Variáveis globais para controlo dos POIs e Filtros
+let todosOsPoisCarregados = [];
 
 const osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "&copy; OpenStreetMap",
@@ -110,16 +115,16 @@ const iconesPorTipo = {
       "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-violet.png",
   }),
 
-  // --- VERMELHO (Pontos críticos e Genéricos) ---
   "início/fim": L.icon({
     ...baseIconParams,
     iconUrl:
       "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
   }),
+
   "ponto de interesse": L.icon({
     ...baseIconParams,
     iconUrl:
-      "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+      "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png",
   }),
 
   // --- CINZENTO (Infraestruturas de suporte) ---
@@ -167,18 +172,69 @@ async function atualizarListaTrilhos(dificuldade) {
   }
 }
 
+// 1. CARREGAR POIS DA API (GUARDA EM MEMÓRIA E ATIVA OS CHECKS)
 async function carregarPOIs(trilhoId) {
+  // Se o ID não for um número válido, não faz o fetch e sai da função em segurança
+  if (!trilhoId || isNaN(trilhoId)) return;
+
   try {
     const response = await fetch(`/api/pois/${trilhoId}`);
     const data = await response.json();
-    if (window.camadaPois) map.removeLayer(window.camadaPois);
 
-    window.camadaPois = L.geoJSON(data, {
+    // Armazena as features na nossa variável global de filtragem
+    todosOsPoisCarregados = data.features || [];
+
+    // Faz reset visual a todas as checkboxes de filtros sempre que muda de trilho
+    document
+      .querySelectorAll(".filtro-poi-check")
+      .forEach((cb) => (cb.checked = true));
+
+    // Desenha inicialmente todas as categorias
+    renderizarFiltroCamada(todosOsPoisCarregados);
+  } catch (err) {
+    console.error("Erro POIs:", err);
+  }
+}
+
+// 2. FUNÇÃO CENTRAL PARA RENDERIZAR OS POIS CONFORME O FILTRO ATIVO
+function renderizarFiltroCamada(featuresParaExibir) {
+  if (window.camadaPois) map.removeLayer(window.camadaPois);
+
+  window.camadaPois = L.geoJSON(
+    {
+      type: "FeatureCollection",
+      features: featuresParaExibir,
+    },
+    {
       pointToLayer: (feature, latlng) => {
-        // Correção de String defensiva para mapear o ícone
-        const tipoChave = feature.properties.tipo
+        // Lemos o tipo diretamente da BD, limpando espaços e pondo em minúsculas
+        let tipoChave = feature.properties.tipo
           ? feature.properties.tipo.toLowerCase().trim()
           : "default";
+
+        // --- NORMALIZAÇÃO FORÇADA DE SEGURANÇA ---
+        if (tipoChave === "água / rio") tipoChave = "água";
+        if (tipoChave === "miradouro") tipoChave = "miradouro / observatório";
+
+        // Se na base de dados estiver escrito com espaços ou variações do início/fim, forçamos o ícone vermelho!
+        if (
+          tipoChave.includes("início") ||
+          tipoChave.includes("fim") ||
+          tipoChave === "início/fim"
+        ) {
+          return L.marker(latlng, {
+            icon: iconesPorTipo["início/fim"], // Força o marcador VERMELHO da tua lista
+          });
+        }
+
+        // Se for o miradouro, mantemos verde para o grupo da natureza
+        if (tipoChave === "miradouro / observatório") {
+          return L.marker(latlng, {
+            icon: iconesPorTipo["natureza"],
+          });
+        }
+
+        // Para todos os outros, usa o teu objeto iconesPorTipo mapeado
         return L.marker(latlng, {
           icon: iconesPorTipo[tipoChave] || iconesPorTipo["default"],
         });
@@ -201,11 +257,91 @@ async function carregarPOIs(trilhoId) {
           }
         });
       },
-    }).addTo(map);
-  } catch (err) {
-    console.error("Erro POIs:", err);
-  }
+    },
+  ).addTo(map);
 }
+// 3. MONITORIZAÇÃO CLICÁVEL DAS CHECKBOXES DE FILTRAGEM
+document.querySelectorAll(".filtro-poi-check").forEach((checkbox) => {
+  checkbox.addEventListener("click", function (evento) {
+    evento.stopPropagation();
+
+    if (!todosOsPoisCarregados || todosOsPoisCarregados.length === 0) return;
+
+    // Obtém os grupos ativos do HTML
+    const gruposAtivos = Array.from(
+      document.querySelectorAll(".filtro-poi-check:checked"),
+    ).map((cb) => cb.value);
+
+    // Filtra os pontos
+    const featuresFiltradas = todosOsPoisCarregados.filter((feature) => {
+      if (!feature.properties || !feature.properties.tipo)
+        return gruposAtivos.includes("geral");
+
+      const tipoReal = feature.properties.tipo.toLowerCase().trim();
+      let grupoAlvo = "geral";
+
+      // Grupo do Início/Fim (Vermelho) - Se contiver a palavra "início" ou "fim" vai para aqui
+      if (
+        tipoReal.includes("início") ||
+        tipoReal.includes("fim") ||
+        tipoReal === "início/fim"
+      ) {
+        grupoAlvo = "critico";
+      }
+      // Grupo Verde: Natureza e Observação
+      else if (
+        [
+          "natureza",
+          "via",
+          "flora",
+          "fauna",
+          "parque de lazer / merendas",
+          "miradouro / observatório",
+          "miradouro",
+        ].includes(tipoReal)
+      ) {
+        grupoAlvo = "natureza";
+      }
+      // Grupo Azul: Recursos Hídricos e Pontes
+      else if (
+        [
+          "água",
+          "água / rio",
+          "ponte / passadiço",
+          "ponte / monumento",
+        ].includes(tipoReal)
+      ) {
+        grupoAlvo = "agua";
+      }
+      // Grupo Roxo: Património e História
+      else if (
+        [
+          "património",
+          "património / cultural",
+          "ruína histórica",
+          "monumento",
+        ].includes(tipoReal)
+      ) {
+        grupoAlvo = "patrimonio";
+      }
+      // Grupo Dourado/Geral: Pontos de Interesse Gerais e Informação
+      else if (
+        [
+          "ponto de interesse",
+          "informação",
+          "infraestrutura",
+          "túnel",
+        ].includes(tipoReal)
+      ) {
+        grupoAlvo = "geral";
+      }
+
+      return gruposAtivos.includes(grupoAlvo);
+    });
+
+    renderizarFiltroCamada(featuresFiltradas);
+  });
+});
 
 async function mostrarDetalhesPOI(idExterno, layer, propertiesPostgres) {
   try {
@@ -241,9 +377,7 @@ async function mostrarDetalhesPOI(idExterno, layer, propertiesPostgres) {
     `;
 
     if (data.imagens && data.imagens.length > 0 && data.imagens[0] !== "") {
-      // Extrai o caminho correto (seja ele o objeto .url do Mongo ou a string direta)
       const urlImagem = data.imagens[0].url || data.imagens[0];
-
       htmlFoto = `
       <div class="zona-imagem-poi">
         <img src="${urlImagem}" alt="${data.nome || "Imagem do ponto"}" />
@@ -276,7 +410,6 @@ async function carregarTrilho(id) {
   const painel = document.getElementById("trail-info-panel");
   if (!id) {
     if (painel) painel.style.display = "none";
-    // Limpa as camadas do mapa caso o utilizador selecione a opção vazia
     map.eachLayer((layer) => {
       if (layer instanceof L.GeoJSON && layer !== window.camadaPois) {
         map.removeLayer(layer);
@@ -287,7 +420,6 @@ async function carregarTrilho(id) {
   }
 
   try {
-    // 1. Procura os dados espaciais e propriedades base no Postgres
     const response = await fetch(`/api/trilho-completo/${id}`);
     const data = await response.json();
 
@@ -297,7 +429,6 @@ async function carregarTrilho(id) {
       "Sem descrição curta disponível.";
     exibindoLonga = false;
 
-    // 2. Repõe o estado inicial correto do Painel Lateral (Aberto, curto e sem classes extras)
     if (painel) {
       painel.className = "painel-lateral-esquerdo";
       painel.style.display = "block";
@@ -308,9 +439,12 @@ async function carregarTrilho(id) {
     document.getElementById("detalhes-mongo").style.display = "none";
     document.getElementById("aviso-clique").style.display = "block";
     document.getElementById("zona-alternar").style.display = "none";
-    document.getElementById("zona-carrossel").style.display = "none"; // Esconde fotos do trilho anterior
+    document.getElementById("zona-carrossel").style.display = "none";
+    if (document.getElementById("lista-pois-proximos"))
+      document.getElementById("lista-pois-proximos").style.display = "none";
+    if (document.getElementById("ul-pois-proximos"))
+      document.getElementById("ul-pois-proximos").innerHTML = "";
 
-    // Injeta os dados textuais do Postgres/Mongo Inicial
     document.getElementById("info-name").textContent = nomeTrilhoAtual;
     const distValor =
       data.properties?.distancia || data.properties?.distancia_km || "0";
@@ -322,20 +456,15 @@ async function carregarTrilho(id) {
     campoDescCurta.style.display = "block";
     campoDescCurta.textContent = descCurtaGuardada;
 
-    // =================================================================
-    // 3. LIMPA AS LINHAS ANTIGAS E DESENHA A NOVA IMEDIATAMENTE!
-    // =================================================================
     map.eachLayer((layer) => {
       if (layer instanceof L.GeoJSON && layer !== window.camadaPois) {
         map.removeLayer(layer);
       }
     });
 
-    // Cria a camada geográfica do novo percurso
     const camada = L.geoJSON(data, {
       style: { color: "#2ecc71", weight: 6, opacity: 0.8, cursor: "pointer" },
       onEachFeature: (feature, layer) => {
-        // Ao clicar na linha física, expande para ver os detalhes do Mongo (Longa + Carrossel)
         layer.on("click", (e) => {
           L.DomEvent.stopPropagation(e);
           mostrarDetalhesNoPainel(id);
@@ -343,12 +472,10 @@ async function carregarTrilho(id) {
       },
     }).addTo(map);
 
-    // Ajusta o zoom do mapa para enquadrar perfeitamente o novo trilho no ecrã
     if (camada.getBounds().isValid()) {
       map.fitBounds(camada.getBounds(), { padding: [50, 50] });
     }
 
-    // 4. Carrega os pontos de interesse (POIs) deste novo trilho
     carregarPOIs(id);
   } catch (err) {
     console.error("Erro ao carregar percurso ao mudar no dropdown:", err);
@@ -520,66 +647,39 @@ function redefinirEstadoInsercao() {
   document.getElementById("map").style.cursor = "";
 }
 
+// Configura o clique no mapa para capturar a posição do utilizador
 map.on("click", function (e) {
-  if (!modoInsercaoPoi) return;
-
   const lat = e.latlng.lat;
   const lng = e.latlng.lng;
-  const seletor = document.getElementById("trail-selector");
-  const idTrilhoAtivo = parseInt(seletor.value, 10);
-  const nomeTrilho = seletor.options[seletor.selectedIndex].text;
+  pontoCliqueCoords = { lat, lng };
 
-  // Criamos a estrutura HTML da nossa janela costumizada
-  const conteudoFormulario = `
-    <div class="form-novo-poi">
-      <h3>📍 Novo Ponto de Interesse</h3>
-      <p style="font-size:0.8em; color:#7f8c8d; margin:-10px 0 10px 0;">A adicionar ao trilho: <b>${nomeTrilho}</b></p>
-      
-      <div class="form-group-poi">
-        <label>Nome do Ponto (Obrigatório)</label>
-        <input type="text" id="novo-poi-nome" placeholder="Ex: Miradouro do Vouga" required />
-      </div>
-      
-      <div class="form-group-poi">
-        <label>Tipo</label>
-        <select id="novo-poi-tipo">
-          <option value="Início/Fim">Início/Fim</option>
-          <option value="Ponte / Passadiço">Ponte / Passadiço</option>
-          <option value="Miradouro / Observatório">Miradouro / Observatório</option>
-          <option value="Água">Água</option>
-          <option value="Ponto de Interesse">Ponto de Interesse</option>
-          <option value="Ponte / Monumento">Ponte / Monumento</option>
-          <option value="Monumento">Monumento</option>
-          <option value="Ruína Histórica">Ruína Histórica</option>
-          <option value="Fauna">Fauna</option>
-          <option value="Flora">Flora</option>
-          <option value="Parque de Lazer / Merendas">Parque de Lazer / Merendas</option>
-          <option value="Património / Cultural">Património / Cultural</option>
-        </select>
-      </div>
-      
-      <div class="form-group-poi">
-        <label>Descrição Curta (Obrigatório)</label>
-        <input type="text" id="novo-poi-desc" placeholder="Uma breve descrição sobre o local..." required />
-      </div>
+  // Atualiza o texto no painel direito
+  document.getElementById("coordenadas-clique").innerText =
+    `Lat: ${lat.toFixed(5)} | Lng: ${lng.toFixed(5)}`;
 
-      <div class="form-group-poi">
-        <label>Fotografia (Opcional)</label>
-        <input type="file" id="novo-poi-imagem" accept="image/png, image/jpeg" />
-      </div>
-      
-      <div class="form-poi-botoes">
-        <button class="btn-poi-salvar" onclick="submeterNovoPoi(${lat}, ${lng}, ${idTrilhoAtivo})">Gravar Ponto</button>
-        <button class="btn-poi-cancelar" onclick="map.closePopup(); redefinirEstadoInsercao();">Sair</button>
-      </div>
-    </div>
-  `;
+  // Remove o pin anterior se já existir
+  if (marcadorClique) {
+    map.removeLayer(marcadorClique);
+  }
 
-  // Abre a janela bonita no formato de um Popup do Leaflet nas coordenadas do clique
-  L.popup().setLatLng([lat, lng]).setContent(conteudoFormulario).openOn(map);
+  // Cria um novo marcador vermelho ou personalizado para destacar onde o utilizador clicou
+  marcadorClique = L.marker([lat, lng], {
+    icon: L.icon({
+      iconUrl:
+        "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
+      shadowUrl:
+        "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      shadowSize: [41, 41],
+    }),
+  })
+    .addTo(map)
+    .bindPopup("<b>Estou aqui!</b><br>Ponto de partida da análise.")
+    .openPopup();
 });
 
-// 3. Função global disparada ao clicar no botão "Gravar Ponto" (ALTERADA PARA FORMDATA)
 window.submeterNovoPoi = function (lat, lng, idTrilho) {
   const nome = document.getElementById("novo-poi-nome").value;
   const tipo = document.getElementById("novo-poi-tipo").value;
@@ -591,7 +691,6 @@ window.submeterNovoPoi = function (lat, lng, idTrilho) {
     return;
   }
 
-  // --- USO DE FORMDATA PARA SUPORTAR O FICHEIRO ---
   const formData = new FormData();
   formData.append("nome", nome);
   formData.append("tipo", tipo);
@@ -600,12 +699,10 @@ window.submeterNovoPoi = function (lat, lng, idTrilho) {
   formData.append("lng", lng);
   formData.append("id_trilho", idTrilho);
 
-  // Adiciona a imagem se houver um ficheiro selecionado
   if (inputImagem.files && inputImagem.files[0]) {
     formData.append("imagem_poi", inputImagem.files[0]);
   }
 
-  // Desativa o botão para evitar múltiplos cliques
   const btnSalvar = document.querySelector(".btn-poi-salvar");
   if (btnSalvar) {
     btnSalvar.disabled = true;
@@ -614,8 +711,6 @@ window.submeterNovoPoi = function (lat, lng, idTrilho) {
 
   fetch("/api/pois/criar", {
     method: "POST",
-    // IMPORTANTE: Ao usar FormData, NÃO deves definir o Content-Type manualmente.
-    // O browser define automaticamente como 'multipart/form-data' com a boundary correta.
     body: formData,
   })
     .then((res) => {
@@ -624,11 +719,11 @@ window.submeterNovoPoi = function (lat, lng, idTrilho) {
     })
     .then((data) => {
       alert(`Sucesso! O ponto "${nome}" foi registado.`);
-      map.closePopup(); // Fecha o formulário
-      redefinirEstadoInsercao(); // Limpa o rato
+      map.closePopup();
+      redefinirEstadoInsercao();
 
       if (typeof carregarPOIs === "function") {
-        carregarPOIs(idTrilho); // Atualiza os pins no ecrã automaticamente
+        carregarPOIs(idTrilho);
       }
     })
     .catch((err) => {
@@ -637,5 +732,75 @@ window.submeterNovoPoi = function (lat, lng, idTrilho) {
       redefinirEstadoInsercao();
     });
 };
+
+// ROTA 7 FRONTEND: CÁLCULO ESPACIAL DE PROXIMIDADE (POSTGIS)
+
+async function calcularPoisProximos(event) {
+  if (event) event.stopPropagation();
+
+  const raioMetros = document.getElementById("raio-distancia-postgis").value;
+  const listaDiv = document.getElementById("lista-pois-proximos");
+  const ulLista = document.getElementById("ul-pois-proximos");
+  const btn = document.getElementById("btn-calcular-proximidade");
+
+  // Validação segura do ponto de clique
+  if (!pontoCliqueCoords || !pontoCliqueCoords.lat || !pontoCliqueCoords.lng) {
+    alert(
+      "Por favor, clica primeiro em qualquer ponto do mapa para definir a tua localização!",
+    );
+    return;
+  }
+
+  try {
+    btn.disabled = true;
+    btn.style.backgroundColor = "#7d3c98";
+    btn.textContent = "⚙️ Query PostGIS...";
+
+    // Captura o ID do trilho ativo no teu dropdown
+    const trilhoId = document.getElementById("trail-selector").value;
+
+    if (!trilhoId) {
+      alert(
+        "Por favor, seleciona um trilho no menu superior antes de calcular!",
+      );
+      btn.disabled = false;
+      btn.style.backgroundColor = "#9b59b6";
+      btn.textContent = "🔍 Calcular a partir do Ponto";
+      return;
+    }
+
+    // ADICIONADO: Enviamos também o id_trilho na rota!
+    const url = `/api/pois/proximos-ponto?lat=${pontoCliqueCoords.lat}&lng=${pontoCliqueCoords.lng}&raio=${raioMetros}&id_trilho=${trilhoId}`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    ulLista.innerHTML = "";
+
+    if (!data.pontos || data.pontos.length === 0) {
+      ulLista.innerHTML = `<li style="list-style: none; color: #7f8c8d; margin-left: -15px;">ℹ️ Nenhum POI a menos de ${raioMetros}m deste ponto.</li>`;
+    } else {
+      data.pontos.forEach((ponto) => {
+        const li = document.createElement("li");
+        li.style.marginBottom = "8px";
+        li.innerHTML = `<b>${ponto.nome}</b> <span style="color:#7f8c8d; font-size:0.9em;">(${ponto.tipo})</span><br>
+                        📏 A <span style="color: #9b59b6; font-weight: bold;">${ponto.distancia_metros}m</span> de ti.`;
+        ulLista.appendChild(li);
+      });
+    }
+
+    listaDiv.style.display = "block";
+    btn.disabled = false;
+    btn.style.backgroundColor = "#9b59b6";
+    btn.textContent = "🔍 Calcular a partir do Ponto";
+  } catch (err) {
+    console.error("Erro detalhado no fetch:", err);
+    alert("Erro ao comunicar com o servidor.");
+    btn.disabled = false;
+    btn.style.backgroundColor = "#9b59b6";
+    btn.textContent = "🔍 Calcular a partir do Ponto";
+  }
+}
+window.calcularPoisProximos = calcularPoisProximos;
 
 window.alternarDescricao = alternarDescricao;
